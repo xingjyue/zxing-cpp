@@ -51,9 +51,11 @@ protected:
   /** stateCount must be int[5] */
   static float centerFromEnd(int* stateCount, int end);
   static bool foundPatternCross(int* stateCount);
+  static bool foundPatternDiagonal(int* stateCount);
 
   float crossCheckVertical(size_t startI, size_t centerJ, int maxCount, int originalStateCountTotal);
   float crossCheckHorizontal(size_t startJ, size_t centerI, int maxCount, int originalStateCountTotal);
+  bool crossCheckDiagonal(size_t centerI, size_t centerJ);
 
   /** stateCount must be int[5] */
   bool handlePossibleCenter(int* stateCount, size_t i, size_t j);
