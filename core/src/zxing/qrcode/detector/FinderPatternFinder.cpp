@@ -60,7 +60,7 @@ double squaredDistance(Ref<FinderPattern> a, Ref<FinderPattern> b) {
 
 int FinderPatternFinder::CENTER_QUORUM = 2;
 int FinderPatternFinder::MIN_SKIP = 3;
-int FinderPatternFinder::MAX_MODULES = 57;
+int FinderPatternFinder::MAX_MODULES = 97;
 
 float FinderPatternFinder::centerFromEnd(int* stateCount, int end) {
   return (float)(end - stateCount[4] - stateCount[3]) - stateCount[2] / 2.0f;
@@ -576,7 +576,13 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
       } else { // White pixel
         if ((currentState & 1) == 0) { // Counting black pixels
           if (currentState == 4) { // A winner?
-            if (foundPatternCross(stateCount)) { // Yes
+            bool foundCross = foundPatternCross(stateCount);
+            // Fallback for degraded images: allow a looser ratio early, then rely on
+            // vertical/horizontal/diagonal cross-checks plus geometry ranking to reject noise.
+            if (!foundCross && possibleCenters_.size() < 3) {
+              foundCross = foundPatternDiagonal(stateCount);
+            }
+            if (foundCross) { // Yes
               bool confirmed = handlePossibleCenter(stateCount, i, j);
               if (confirmed) {
                 // Start examining every other line. Checking each line turned out to be too
@@ -632,7 +638,11 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
         }
       }
     }
-    if (foundPatternCross(stateCount)) {
+    bool foundCross = foundPatternCross(stateCount);
+    if (!foundCross && possibleCenters_.size() < 3) {
+      foundCross = foundPatternDiagonal(stateCount);
+    }
+    if (foundCross) {
       bool confirmed = handlePossibleCenter(stateCount, i, maxJ);
       if (confirmed) {
         iSkip = stateCount[0];
