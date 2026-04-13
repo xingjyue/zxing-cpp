@@ -27,6 +27,7 @@
 
 using std::sort;
 using std::max;
+using std::min;
 using std::abs;
 using std::vector;
 using zxing::Ref;
@@ -50,10 +51,189 @@ public:
   }
 };
 
+struct RecoveredPatternCandidate {
+  float x;
+  float y;
+  float moduleSize;
+  float score;
+  bool matched;
+  int inBoundsCorners;
+};
+
 double squaredDistance(Ref<FinderPattern> a, Ref<FinderPattern> b) {
   double x = a->getX() - b->getX();
   double y = a->getY() - b->getY();
   return x * x + y * y;
+}
+
+bool inBounds(const BitMatrix& image, int x, int y)
+{
+  return x >= 0 && y >= 0 && x < (int)image.getWidth() && y < (int)image.getHeight();
+}
+
+bool foundFinderLikePattern(const int* stateCount, float varianceDivisor)
+{
+  int totalModuleSize = 0;
+  for (int i = 0; i < 5; i++) {
+    if (stateCount[i] == 0) {
+      return false;
+    }
+    totalModuleSize += stateCount[i];
+  }
+  if (totalModuleSize < 7) {
+    return false;
+  }
+
+  float moduleSize = (float)totalModuleSize / 7.0f;
+  float maxVariance = moduleSize / varianceDivisor;
+  return abs(moduleSize - stateCount[0]) < maxVariance &&
+         abs(moduleSize - stateCount[1]) < maxVariance &&
+         abs(3.0f * moduleSize - stateCount[2]) < 3.0f * maxVariance &&
+         abs(moduleSize - stateCount[3]) < maxVariance &&
+         abs(moduleSize - stateCount[4]) < maxVariance;
+}
+
+bool readAxisStateCount(const BitMatrix& image, int centerX, int centerY, int dx, int dy, int* stateCount)
+{
+  for (int i = 0; i < 5; i++) {
+    stateCount[i] = 0;
+  }
+
+  int x = centerX;
+  int y = centerY;
+  while (inBounds(image, x, y) && image.get(x, y)) {
+    stateCount[2]++;
+    x -= dx;
+    y -= dy;
+  }
+  while (inBounds(image, x, y) && !image.get(x, y)) {
+    stateCount[1]++;
+    x -= dx;
+    y -= dy;
+  }
+  while (inBounds(image, x, y) && image.get(x, y)) {
+    stateCount[0]++;
+    x -= dx;
+    y -= dy;
+  }
+
+  x = centerX + dx;
+  y = centerY + dy;
+  while (inBounds(image, x, y) && image.get(x, y)) {
+    stateCount[2]++;
+    x += dx;
+    y += dy;
+  }
+  while (inBounds(image, x, y) && !image.get(x, y)) {
+    stateCount[3]++;
+    x += dx;
+    y += dy;
+  }
+  while (inBounds(image, x, y) && image.get(x, y)) {
+    stateCount[4]++;
+    x += dx;
+    y += dy;
+  }
+
+  return stateCount[0] > 0 && stateCount[1] > 0 && stateCount[2] > 0 && stateCount[3] > 0 && stateCount[4] > 0;
+}
+
+float patternDeviation(const int* stateCount)
+{
+  int total = 0;
+  for (int i = 0; i < 5; i++) {
+    total += stateCount[i];
+  }
+  if (total < 7) {
+    return std::numeric_limits<float>::max();
+  }
+  float module = (float)total / 7.0f;
+  float expected[5] = {module, module, 3.0f * module, module, module};
+  float error = 0.0f;
+  for (int i = 0; i < 5; i++) {
+    error += abs(stateCount[i] - expected[i]) / expected[i];
+  }
+  return error;
+}
+
+RecoveredPatternCandidate evaluateRecoveredCandidate(const BitMatrix& image, Ref<FinderPattern> a, Ref<FinderPattern> b,
+                                                     float estX, float estY, float moduleSize)
+{
+  RecoveredPatternCandidate result;
+  result.x = estX;
+  result.y = estY;
+  result.moduleSize = moduleSize;
+  result.score = std::numeric_limits<float>::max();
+  result.matched = false;
+  result.inBoundsCorners = 0;
+
+  int cX = (int)(estX + 0.5f);
+  int cY = (int)(estY + 0.5f);
+  if (inBounds(image, cX, cY)) {
+    result.inBoundsCorners++;
+  }
+
+  float dX = b->getX() + estX - a->getX();
+  float dY = b->getY() + estY - a->getY();
+  if (inBounds(image, (int)(dX + 0.5f), (int)(dY + 0.5f))) {
+    result.inBoundsCorners++;
+  }
+
+  int searchRadius = max(2, (int)(moduleSize * 4.0f));
+  int estXi = (int)(estX + 0.5f);
+  int estYi = (int)(estY + 0.5f);
+  for (int dy = -searchRadius; dy <= searchRadius; dy++) {
+    for (int dx = -searchRadius; dx <= searchRadius; dx++) {
+      int x = estXi + dx;
+      int y = estYi + dy;
+      if (!inBounds(image, x, y) || !image.get(x, y)) {
+        continue;
+      }
+
+      int horizontal[5];
+      int vertical[5];
+      if (!readAxisStateCount(image, x, y, 1, 0, horizontal) || !readAxisStateCount(image, x, y, 0, 1, vertical)) {
+        continue;
+      }
+
+      if (!foundFinderLikePattern(horizontal, 1.4f) || !foundFinderLikePattern(vertical, 1.4f)) {
+        continue;
+      }
+
+      float score = patternDeviation(horizontal) + patternDeviation(vertical);
+      float offsetPenalty = (float)(dx * dx + dy * dy) / (moduleSize * moduleSize + 1.0f);
+      score += 0.05f * offsetPenalty;
+      if (score < result.score) {
+        result.score = score;
+        result.x = (float)x;
+        result.y = (float)y;
+        result.moduleSize = (float)(horizontal[0] + horizontal[1] + horizontal[2] + horizontal[3] + horizontal[4]) / 7.0f;
+        result.matched = true;
+      }
+    }
+  }
+
+  if (!result.matched) {
+    // Keep deterministic ordering for synthetic fallback.
+    float imageCx = (image.getWidth() - 1) / 2.0f;
+    float imageCy = (image.getHeight() - 1) / 2.0f;
+    float dx = estX - imageCx;
+    float dy = estY - imageCy;
+    result.score = dx * dx + dy * dy;
+  }
+
+  return result;
+}
+
+bool isBetterRecoveredCandidate(const RecoveredPatternCandidate& a, const RecoveredPatternCandidate& b)
+{
+  if (a.matched != b.matched) {
+    return a.matched;
+  }
+  if (a.inBoundsCorners != b.inBoundsCorners) {
+    return a.inBoundsCorners > b.inBoundsCorners;
+  }
+  return a.score < b.score;
 }
 
 }
@@ -382,98 +562,141 @@ bool FinderPatternFinder::haveMultiplyConfirmedCenters() {
 }
 
 vector< Ref<FinderPattern> > FinderPatternFinder::selectBestPatterns() {
-  if (possibleCenters_.size() < 3) {
-    throw zxing::ReaderException("Could not find three finder patterns");
+  if (possibleCenters_.size() < 2) {
+    throw zxing::ReaderException("Could not find enough finder patterns");
   }
 
-  // Keep only centers observed multiple times when enough candidates are available.
-  for (vector<Ref<FinderPattern> >::iterator it = possibleCenters_.begin(); it != possibleCenters_.end();) {
-    if ((*it)->getCount() < CENTER_QUORUM) {
-      it = possibleCenters_.erase(it);
-    } else {
-      ++it;
+  vector<Ref<FinderPattern> > confirmedCenters;
+  confirmedCenters.reserve(possibleCenters_.size());
+  for (size_t i = 0; i < possibleCenters_.size(); i++) {
+    if (possibleCenters_[i]->getCount() >= CENTER_QUORUM) {
+      confirmedCenters.push_back(possibleCenters_[i]);
     }
   }
 
-  if (possibleCenters_.size() < 3) {
-    throw zxing::ReaderException("Could not find three confirmed finder patterns");
-  }
+  vector<Ref<FinderPattern> > candidates = confirmedCenters.size() >= 3 ? confirmedCenters : possibleCenters_;
 
-  // Sort by module size so we can prune combinations whose sizes are too dissimilar.
-  sort(possibleCenters_.begin(), possibleCenters_.end(), EstimatedModuleComparator());
+  if (candidates.size() >= 3) {
+    // Sort by module size so we can prune combinations whose sizes are too dissimilar.
+    sort(candidates.begin(), candidates.end(), EstimatedModuleComparator());
 
-  double bestDistortion = std::numeric_limits<double>::max();
-  vector<Ref<FinderPattern> > bestPatterns(3);
+    double bestDistortion = std::numeric_limits<double>::max();
+    vector<Ref<FinderPattern> > bestPatterns(3);
 
-  for (size_t i = 0; i + 2 < possibleCenters_.size(); i++) {
-    Ref<FinderPattern> fpi = possibleCenters_[i];
-    float minModuleSize = fpi->getEstimatedModuleSize();
+    for (size_t i = 0; i + 2 < candidates.size(); i++) {
+      Ref<FinderPattern> fpi = candidates[i];
+      float minModuleSize = fpi->getEstimatedModuleSize();
 
-    for (size_t j = i + 1; j + 1 < possibleCenters_.size(); j++) {
-      Ref<FinderPattern> fpj = possibleCenters_[j];
-      double squares0 = squaredDistance(fpi, fpj);
+      for (size_t j = i + 1; j + 1 < candidates.size(); j++) {
+        Ref<FinderPattern> fpj = candidates[j];
+        double squares0 = squaredDistance(fpi, fpj);
 
-      for (size_t k = j + 1; k < possibleCenters_.size(); k++) {
-        Ref<FinderPattern> fpk = possibleCenters_[k];
-        float maxModuleSize = fpk->getEstimatedModuleSize();
-        if (maxModuleSize > minModuleSize * 1.4f) {
-          break;
-        }
+        for (size_t k = j + 1; k < candidates.size(); k++) {
+          Ref<FinderPattern> fpk = candidates[k];
+          float maxModuleSize = fpk->getEstimatedModuleSize();
+          if (maxModuleSize > minModuleSize * 1.8f) {
+            break;
+          }
 
-        double a = squares0;
-        double b = squaredDistance(fpj, fpk);
-        double c = squaredDistance(fpi, fpk);
+          double a = squares0;
+          double b = squaredDistance(fpj, fpk);
+          double c = squaredDistance(fpi, fpk);
 
-        // Sort a,b,c ascending (inlined, branch-light).
-        if (a < b) {
-          if (b > c) {
-            if (a < c) {
-              double t = b;
-              b = c;
-              c = t;
+          // Sort a,b,c ascending (inlined, branch-light).
+          if (a < b) {
+            if (b > c) {
+              if (a < c) {
+                double t = b;
+                b = c;
+                c = t;
+              } else {
+                double t = a;
+                a = c;
+                c = b;
+                b = t;
+              }
+            }
+          } else {
+            if (b < c) {
+              if (a < c) {
+                double t = a;
+                a = b;
+                b = t;
+              } else {
+                double t = a;
+                a = b;
+                b = c;
+                c = t;
+              }
             } else {
               double t = a;
               a = c;
-              c = b;
-              b = t;
-            }
-          }
-        } else {
-          if (b < c) {
-            if (a < c) {
-              double t = a;
-              a = b;
-              b = t;
-            } else {
-              double t = a;
-              a = b;
-              b = c;
               c = t;
             }
-          } else {
-            double t = a;
-            a = c;
-            c = t;
           }
-        }
 
-        // Finder patterns should form an isosceles-right triangle.
-        double distortion = abs(c - 2 * b) + abs(c - 2 * a);
-        if (distortion < bestDistortion) {
-          bestDistortion = distortion;
-          bestPatterns[0] = fpi;
-          bestPatterns[1] = fpj;
-          bestPatterns[2] = fpk;
+          // Finder patterns should form an isosceles-right triangle.
+          double distortion = abs(c - 2 * b) + abs(c - 2 * a);
+          if (distortion < bestDistortion) {
+            bestDistortion = distortion;
+            bestPatterns[0] = fpi;
+            bestPatterns[1] = fpj;
+            bestPatterns[2] = fpk;
+          }
         }
       }
     }
+
+    if (bestDistortion != std::numeric_limits<double>::max()) {
+      return bestPatterns;
+    }
   }
 
-  if (bestDistortion == std::numeric_limits<double>::max()) {
-    throw zxing::ReaderException("Could not find a valid finder pattern geometry");
+  // Recover missing finder pattern by copying/extrapolating from the best two detected "hui" patterns.
+  double bestPairScore = -1.0;
+  Ref<FinderPattern> bestA;
+  Ref<FinderPattern> bestB;
+  for (size_t i = 0; i + 1 < possibleCenters_.size(); i++) {
+    for (size_t j = i + 1; j < possibleCenters_.size(); j++) {
+      Ref<FinderPattern> a = possibleCenters_[i];
+      Ref<FinderPattern> b = possibleCenters_[j];
+      float minSize = std::min(a->getEstimatedModuleSize(), b->getEstimatedModuleSize());
+      float maxSize = max(a->getEstimatedModuleSize(), b->getEstimatedModuleSize());
+      if (minSize <= 0.0f || maxSize > minSize * 2.2f) {
+        continue;
+      }
+      double dist = squaredDistance(a, b);
+      if (dist < (double)(minSize * minSize * 9.0f)) {
+        continue;
+      }
+      double pairScore = a->getCount() + b->getCount() - abs(a->getEstimatedModuleSize() - b->getEstimatedModuleSize()) / maxSize;
+      if (pairScore > bestPairScore) {
+        bestPairScore = pairScore;
+        bestA = a;
+        bestB = b;
+      }
+    }
+  }
+  if (bestA == 0 || bestB == 0) {
+    throw zxing::ReaderException("Could not recover missing finder pattern");
   }
 
-  return bestPatterns;
+  float avgModuleSize = (bestA->getEstimatedModuleSize() + bestB->getEstimatedModuleSize()) / 2.0f;
+  float vx = bestB->getX() - bestA->getX();
+  float vy = bestB->getY() - bestA->getY();
+
+  RecoveredPatternCandidate candidate1 = evaluateRecoveredCandidate(*image_, bestA, bestB, bestA->getX() - vy,
+                                                                    bestA->getY() + vx, avgModuleSize);
+  RecoveredPatternCandidate candidate2 = evaluateRecoveredCandidate(*image_, bestA, bestB, bestA->getX() + vy,
+                                                                    bestA->getY() - vx, avgModuleSize);
+  RecoveredPatternCandidate bestRecovered = isBetterRecoveredCandidate(candidate1, candidate2) ? candidate1 : candidate2;
+
+  Ref<FinderPattern> recovered(new FinderPattern(bestRecovered.x, bestRecovered.y, bestRecovered.moduleSize));
+  vector<Ref<FinderPattern> > result(3);
+  result[0] = bestA;
+  result[1] = bestB;
+  result[2] = recovered;
+  return result;
 }
 
 vector<Ref<FinderPattern> > FinderPatternFinder::orderBestPatterns(vector<Ref<FinderPattern> > patterns) {
