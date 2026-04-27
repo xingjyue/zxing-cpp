@@ -100,8 +100,8 @@ Ref<DetectorResult> Detector::processFinderPatternInfo(Ref<FinderPatternInfo> in
     int estAlignmentY = (int)(topLeft->getY() + correctionToTopLeft * (bottomRightY - topLeft->getY()));
 
 
-    // Kind of arbitrary -- expand search radius before giving up
-    for (int i = 4; i <= 16; i <<= 1) {
+    // Expand search radius before giving up (larger radii help warped / off-grid alignment patterns)
+    for (int i = 4; i <= 32; i <<= 1) {
       try {
         alignmentPattern = findAlignmentInRegion(moduleSize, estAlignmentX, estAlignmentY, (float)i);
         break;

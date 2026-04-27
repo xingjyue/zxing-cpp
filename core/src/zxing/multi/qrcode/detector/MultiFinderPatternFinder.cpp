@@ -61,7 +61,8 @@ MultiFinderPatternFinder::MultiFinderPatternFinder(Ref<BitMatrix> image,
 MultiFinderPatternFinder::~MultiFinderPatternFinder(){}
 
 vector<Ref<FinderPatternInfo> > MultiFinderPatternFinder::findMulti(DecodeHints const& hints){
-  bool tryHarder = hints.getTryHarder();
+  tryHarder_ = hints.getTryHarder();
+  bool tryHarder = tryHarder_;
   Ref<BitMatrix> image = image_; // Protected member
   int maxI = image->getHeight();
   int maxJ = image->getWidth();

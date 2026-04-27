@@ -47,10 +47,12 @@ protected:
   bool hasSkipped_;
 
   Ref<ResultPointCallback> callback_;
+  /** Set from DecodeHints in find() / findMulti(); relaxes ratio checks for warped codes. */
+  bool tryHarder_;
 
   /** stateCount must be int[5] */
   static float centerFromEnd(int* stateCount, int end);
-  static bool foundPatternCross(int* stateCount);
+  bool foundPatternCross(int* stateCount);
 
   float crossCheckVertical(size_t startI, size_t centerJ, int maxCount, int originalStateCountTotal);
   float crossCheckHorizontal(size_t startJ, size_t centerI, int maxCount, int originalStateCountTotal);

@@ -23,9 +23,56 @@
 #include <zxing/ReaderException.h>
 #include <iostream>
 #include <sstream>
+#include <cmath>
 
 namespace zxing {
 using namespace std;
+
+namespace {
+
+/** Bilinear sample of a binarized image; softens half-pixel grid misalignment after perspective warp. */
+static bool sampleBitBilinear(Ref<BitMatrix> const& image, float fx, float fy) {
+  int w = image->getWidth();
+  int h = image->getHeight();
+  if (w <= 0 || h <= 0) {
+    return false;
+  }
+  if (fx < 0) {
+    fx = 0;
+  }
+  if (fy < 0) {
+    fy = 0;
+  }
+  if (fx > w - 1) {
+    fx = (float)(w - 1);
+  }
+  if (fy > h - 1) {
+    fy = (float)(h - 1);
+  }
+  float x0f = floor(fx);
+  float y0f = floor(fy);
+  int x0 = (int)x0f;
+  int y0 = (int)y0f;
+  int x1 = x0 + 1;
+  int y1 = y0 + 1;
+  if (x1 >= w) {
+    x1 = w - 1;
+  }
+  if (y1 >= h) {
+    y1 = h - 1;
+  }
+  float dx = fx - x0f;
+  float dy = fy - y0f;
+  float v00 = image->get(x0, y0) ? 1.0f : 0.0f;
+  float v10 = image->get(x1, y0) ? 1.0f : 0.0f;
+  float v01 = image->get(x0, y1) ? 1.0f : 0.0f;
+  float v11 = image->get(x1, y1) ? 1.0f : 0.0f;
+  float v = v00 * (1 - dx) * (1 - dy) + v10 * dx * (1 - dy) + v01 * (1 - dx) * dy + v11 * dx * dy;
+  return v > 0.5f;
+}
+
+}
+
 
 GridSampler GridSampler::gridSampler;
 
@@ -45,7 +92,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, Ref<
     transform->transformPoints(points);
     checkAndNudgePoints(image, points);
     for (int x = 0; x < max; x += 2) {
-      if (image->get((int)points[x], (int)points[x + 1])) {
+      if (sampleBitBilinear(image, points[x], points[x + 1])) {
         bits->set(x >> 1, y);
       }
     }
@@ -66,7 +113,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimensionX, int
     transform->transformPoints(points);
     checkAndNudgePoints(image, points);
     for (int x = 0; x < max; x += 2) {
-      if (image->get((int)points[x], (int)points[x + 1])) {
+      if (sampleBitBilinear(image, points[x], points[x + 1])) {
         bits->set(x >> 1, y);
       }
     }

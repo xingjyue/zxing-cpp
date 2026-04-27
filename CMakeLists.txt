@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 
 project(zxing)
 
@@ -44,8 +44,8 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif()
 
-# OpenCV classes
-find_package(OpenCV)
+# OpenCV classes (optional; zxing CLI builds without it)
+find_package(OpenCV QUIET)
 if(OpenCV_FOUND)
     list(APPEND LIBZXING_FILES
         opencv/src/zxing/MatSource.cpp

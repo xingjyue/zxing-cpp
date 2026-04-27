@@ -96,8 +96,8 @@ bool FinderPatternFinder::foundPatternCross(int* stateCount) {
     return false;
   }
   float moduleSize = (float)totalModuleSize / 7.0f;
-  float maxVariance = moduleSize / 2.0f;
-  // Allow less than 50% variance from 1-1-3-1-1 proportions
+  // Default: 50% tolerance. tryHarder: tolerate local stretch from perspective / mild warping.
+  float maxVariance = tryHarder_ ? moduleSize * 0.82f : moduleSize / 2.0f;
   return abs(moduleSize - stateCount[0]) < maxVariance && abs(moduleSize - stateCount[1]) < maxVariance && abs(3.0f
          * moduleSize - stateCount[2]) < 3.0f * maxVariance && abs(moduleSize - stateCount[3]) < maxVariance && abs(
            moduleSize - stateCount[4]) < maxVariance;
@@ -163,7 +163,8 @@ float FinderPatternFinder::crossCheckVertical(size_t startI, size_t centerJ, int
   // If we found a finder-pattern-like section, but its size is more than 40% different than
   // the original, assume it's a false positive
   int stateCountTotal = stateCount[0] + stateCount[1] + stateCount[2] + stateCount[3] + stateCount[4];
-  if (5 * abs(stateCountTotal - originalStateCountTotal) >= 2 * originalStateCountTotal) {
+  int verticalSlack = tryHarder_ ? 3 : 2;
+  if (5 * abs(stateCountTotal - originalStateCountTotal) >= verticalSlack * originalStateCountTotal) {
     return nan();
   }
 
@@ -227,7 +228,8 @@ float FinderPatternFinder::crossCheckHorizontal(size_t startJ, size_t centerI, i
   // If we found a finder-pattern-like section, but its size is significantly different than
   // the original, assume it's a false positive
   int stateCountTotal = stateCount[0] + stateCount[1] + stateCount[2] + stateCount[3] + stateCount[4];
-  if (5 * abs(stateCountTotal - originalStateCountTotal) >= originalStateCountTotal) {
+  int horizontalSlack = tryHarder_ ? 2 : 1;
+  if (5 * abs(stateCountTotal - originalStateCountTotal) >= horizontalSlack * originalStateCountTotal) {
     return nan();
   }
 
@@ -425,11 +427,12 @@ float FinderPatternFinder::distance(Ref<ResultPoint> p1, Ref<ResultPoint> p2) {
 
 FinderPatternFinder::FinderPatternFinder(Ref<BitMatrix> image,
                                            Ref<ResultPointCallback>const& callback) :
-    image_(image), possibleCenters_(), hasSkipped_(false), callback_(callback) {
+    image_(image), possibleCenters_(), hasSkipped_(false), callback_(callback), tryHarder_(false) {
 }
 
 Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
-  bool tryHarder = hints.getTryHarder();
+  tryHarder_ = hints.getTryHarder();
+  bool tryHarder = tryHarder_;
 
   size_t maxI = image_->getHeight();
   size_t maxJ = image_->getWidth();

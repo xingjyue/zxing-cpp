@@ -66,7 +66,7 @@ vector<Ref<Result> > decode_multi(Ref<BinaryBitmap> image, DecodeHints hints) {
   return reader.decodeMultiple(image, hints);
 }
 
-int read_image(Ref<LuminanceSource> source, bool hybrid, string expected) {
+int read_image(Ref<LuminanceSource> source, bool hybrid, string expected, bool hints_try_harder) {
   vector<Ref<Result> > results;
   string cell_result;
   int res = -1;
@@ -79,7 +79,7 @@ int read_image(Ref<LuminanceSource> source, bool hybrid, string expected) {
       binarizer = new GlobalHistogramBinarizer(source);
     }
     DecodeHints hints(DecodeHints::DEFAULT_HINT);
-    hints.setTryHarder(try_harder);
+    hints.setTryHarder(hints_try_harder);
     Ref<BinaryBitmap> binary(new BinaryBitmap(binarizer));
     if (search_multi) {
       results = decode_multi(binary, hints);
@@ -265,14 +265,20 @@ int main(int argc, char** argv) {
 
     int gresult = 1;
     int hresult = 1;
-    if (use_hybrid) {
-      hresult = read_image(source, true, expected);
-    }
-    if (use_global && (verbose || hresult != 0)) {
-      gresult = read_image(source, false, expected);
-      if (!verbose && gresult != 0) {
-        cout << "decoding failed" << endl;
+    auto attempt_decode = [&](bool hints_try_harder) {
+      if (use_hybrid) {
+        hresult = read_image(source, true, expected, hints_try_harder);
       }
+      if (use_global && (verbose || hresult != 0)) {
+        gresult = read_image(source, false, expected, hints_try_harder);
+      }
+    };
+    attempt_decode(try_harder);
+    if (hresult != 0 && gresult != 0 && !try_harder) {
+      attempt_decode(true);
+    }
+    if (!verbose && hresult != 0 && gresult != 0) {
+      cout << "decoding failed" << endl;
     }
     gresult = gresult == 0;
     hresult = hresult == 0;
