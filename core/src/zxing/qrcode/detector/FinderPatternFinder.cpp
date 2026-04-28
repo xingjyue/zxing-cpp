@@ -58,6 +58,8 @@ struct RecoveredPatternCandidate {
   float score;
   bool matched;
   int inBoundsCorners;
+  float quietScore;
+  float timingScore;
 };
 
 double squaredDistance(Ref<FinderPattern> a, Ref<FinderPattern> b) {
@@ -69,6 +71,67 @@ double squaredDistance(Ref<FinderPattern> a, Ref<FinderPattern> b) {
 bool inBounds(const BitMatrix& image, int x, int y)
 {
   return x >= 0 && y >= 0 && x < (int)image.getWidth() && y < (int)image.getHeight();
+}
+
+float quietZoneScore(const BitMatrix& image, int centerX, int centerY, float moduleSize)
+{
+  int r1 = max(1, (int)(moduleSize * 2.5f));
+  int r2 = max(r1 + 1, (int)(moduleSize * 4.0f));
+  int total = 0;
+  int white = 0;
+  for (int y = centerY - r2; y <= centerY + r2; y++) {
+    for (int x = centerX - r2; x <= centerX + r2; x++) {
+      if (!inBounds(image, x, y)) {
+        continue;
+      }
+      int dx = x - centerX;
+      int dy = y - centerY;
+      int d2 = dx * dx + dy * dy;
+      if (d2 < r1 * r1 || d2 > r2 * r2) {
+        continue;
+      }
+      total++;
+      if (!image.get(x, y)) {
+        white++;
+      }
+    }
+  }
+  if (total == 0) {
+    return 0.0f;
+  }
+  return (float)white / total;
+}
+
+float timingPatternScore(const BitMatrix& image, int x0, int y0, int x1, int y1)
+{
+  int dx = abs(x1 - x0);
+  int dy = abs(y1 - y0);
+  int steps = max(dx, dy);
+  if (steps < 8) {
+    return 0.0f;
+  }
+
+  int transitions = 0;
+  int samples = 0;
+  int prev = image.get(x0, y0) ? 1 : 0;
+  for (int i = 1; i <= steps; i++) {
+    float t = (float)i / (float)steps;
+    int x = (int)(x0 + t * (x1 - x0) + 0.5f);
+    int y = (int)(y0 + t * (y1 - y0) + 0.5f);
+    if (!inBounds(image, x, y)) {
+      continue;
+    }
+    int cur = image.get(x, y) ? 1 : 0;
+    if (cur != prev) {
+      transitions++;
+      prev = cur;
+    }
+    samples++;
+  }
+  if (samples <= 1) {
+    return 0.0f;
+  }
+  return (float)transitions / (float)(samples - 1);
 }
 
 bool foundFinderLikePattern(const int* stateCount, float varianceDivisor)
@@ -166,6 +229,8 @@ RecoveredPatternCandidate evaluateRecoveredCandidate(const BitMatrix& image, Ref
   result.score = std::numeric_limits<float>::max();
   result.matched = false;
   result.inBoundsCorners = 0;
+  result.quietScore = 0.0f;
+  result.timingScore = 0.0f;
 
   int cX = (int)(estX + 0.5f);
   int cY = (int)(estY + 0.5f);
@@ -201,6 +266,13 @@ RecoveredPatternCandidate evaluateRecoveredCandidate(const BitMatrix& image, Ref
       }
 
       float score = patternDeviation(horizontal) + patternDeviation(vertical);
+      float qScore = quietZoneScore(image, x, y, moduleSize);
+      float tScoreA = timingPatternScore(image, x, y, (int)(a->getX() + 0.5f), (int)(a->getY() + 0.5f));
+      float tScoreB = timingPatternScore(image, x, y, (int)(b->getX() + 0.5f), (int)(b->getY() + 0.5f));
+      float tScore = max(tScoreA, tScoreB);
+      // Encourage candidates with surrounding white quiet area and alternating timing-like transitions.
+      score -= 0.8f * qScore;
+      score -= 0.6f * tScore;
       float offsetPenalty = (float)(dx * dx + dy * dy) / (moduleSize * moduleSize + 1.0f);
       score += 0.05f * offsetPenalty;
       if (score < result.score) {
@@ -209,6 +281,8 @@ RecoveredPatternCandidate evaluateRecoveredCandidate(const BitMatrix& image, Ref
         result.y = (float)y;
         result.moduleSize = (float)(horizontal[0] + horizontal[1] + horizontal[2] + horizontal[3] + horizontal[4]) / 7.0f;
         result.matched = true;
+        result.quietScore = qScore;
+        result.timingScore = tScore;
       }
     }
   }
@@ -229,6 +303,12 @@ bool isBetterRecoveredCandidate(const RecoveredPatternCandidate& a, const Recove
 {
   if (a.matched != b.matched) {
     return a.matched;
+  }
+  if (abs(a.quietScore - b.quietScore) > 0.05f) {
+    return a.quietScore > b.quietScore;
+  }
+  if (abs(a.timingScore - b.timingScore) > 0.02f) {
+    return a.timingScore > b.timingScore;
   }
   if (a.inBoundsCorners != b.inBoundsCorners) {
     return a.inBoundsCorners > b.inBoundsCorners;
@@ -748,8 +828,9 @@ float FinderPatternFinder::distance(Ref<ResultPoint> p1, Ref<ResultPoint> p2) {
 }
 
 FinderPatternFinder::FinderPatternFinder(Ref<BitMatrix> image,
-                                           Ref<ResultPointCallback>const& callback) :
-    image_(image), possibleCenters_(), hasSkipped_(false), callback_(callback) {
+                                         Ref<ResultPointCallback>const& callback,
+                                         bool exhaustiveSearch) :
+    image_(image), possibleCenters_(), hasSkipped_(false), exhaustiveSearch_(exhaustiveSearch), callback_(callback) {
 }
 
 Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
@@ -773,8 +854,8 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
   // could be, so skip this often. When trying harder, look for all
   // QR versions regardless of how dense they are.
   int iSkip = (3 * maxI) / (4 * MAX_MODULES);
-  if (iSkip < MIN_SKIP || tryHarder) {
-      iSkip = MIN_SKIP;
+  if (iSkip < MIN_SKIP || tryHarder || exhaustiveSearch_) {
+    iSkip = MIN_SKIP;
   }
 
   // This is slightly faster than using the Ref. Efficiency is important here
@@ -811,7 +892,7 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
                 // Start examining every other line. Checking each line turned out to be too
                 // expensive and didn't improve performance.
                 iSkip = 2;
-                if (hasSkipped_) {
+                if (hasSkipped_ && !exhaustiveSearch_) {
                   done = haveMultiplyConfirmedCenters();
                 } else {
                   int rowSkip = findRowSkip();
@@ -869,7 +950,7 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
       bool confirmed = handlePossibleCenter(stateCount, i, maxJ);
       if (confirmed) {
         iSkip = stateCount[0];
-        if (hasSkipped_) {
+        if (hasSkipped_ && !exhaustiveSearch_) {
           // Found a third one
           done = haveMultiplyConfirmedCenters();
         }

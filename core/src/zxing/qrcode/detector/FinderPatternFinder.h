@@ -45,6 +45,7 @@ protected:
   Ref<BitMatrix> image_;
   std::vector<Ref<FinderPattern> > possibleCenters_;
   bool hasSkipped_;
+  bool exhaustiveSearch_;
 
   Ref<ResultPointCallback> callback_;
 
@@ -69,7 +70,7 @@ protected:
 
 public:
   static float distance(Ref<ResultPoint> p1, Ref<ResultPoint> p2);
-  FinderPatternFinder(Ref<BitMatrix> image, Ref<ResultPointCallback>const&);
+  FinderPatternFinder(Ref<BitMatrix> image, Ref<ResultPointCallback>const&, bool exhaustiveSearch = false);
   Ref<FinderPatternInfo> find(DecodeHints const& hints);
 };
 }

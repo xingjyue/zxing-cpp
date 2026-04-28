@@ -1,0 +1,2482 @@
+{
+  "payload_count": 20,
+  "records": [
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_clean.png",
+      "decoded": "OCC_BM_0_2HAFCFGW",
+      "ok": true
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_finder_black_20.png",
+      "decoded": "OCC_BM_0_2HAFCFGW",
+      "ok": true
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_finder_black_35.png",
+      "decoded": "OCC_BM_0_2HAFCFGW",
+      "ok": true
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_finder_black_50.png",
+      "decoded": "OCC_BM_0_2HAFCFGW",
+      "ok": true
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 0,
+      "payload": "OCC_BM_0_2HAFCFGW",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/000_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_clean.png",
+      "decoded": "OCC_BM_1_PBBBW43J",
+      "ok": true
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_finder_black_20.png",
+      "decoded": "OCC_BM_1_PBBBW43J",
+      "ok": true
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_finder_black_35.png",
+      "decoded": "OCC_BM_1_PBBBW43J",
+      "ok": true
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_finder_black_50.png",
+      "decoded": "OCC_BM_1_PBBBW43J",
+      "ok": true
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 1,
+      "payload": "OCC_BM_1_PBBBW43J",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/001_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_clean.png",
+      "decoded": "OCC_BM_2_FLHA65PE",
+      "ok": true
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_finder_black_20.png",
+      "decoded": "OCC_BM_2_FLHA65PE",
+      "ok": true
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_finder_black_35.png",
+      "decoded": "OCC_BM_2_FLHA65PE",
+      "ok": true
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_finder_black_50.png",
+      "decoded": "OCC_BM_2_FLHA65PE",
+      "ok": true
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 2,
+      "payload": "OCC_BM_2_FLHA65PE",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/002_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_clean.png",
+      "decoded": "OCC_BM_3_83EF6CR9",
+      "ok": true
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_finder_black_20.png",
+      "decoded": "OCC_BM_3_83EF6CR9",
+      "ok": true
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_finder_black_35.png",
+      "decoded": "OCC_BM_3_83EF6CR9",
+      "ok": true
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_finder_black_50.png",
+      "decoded": "OCC_BM_3_83EF6CR9",
+      "ok": true
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 3,
+      "payload": "OCC_BM_3_83EF6CR9",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/003_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_clean.png",
+      "decoded": "OCC_BM_4_ET4WRPM3",
+      "ok": true
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_finder_black_20.png",
+      "decoded": "OCC_BM_4_ET4WRPM3",
+      "ok": true
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_finder_black_35.png",
+      "decoded": "OCC_BM_4_ET4WRPM3",
+      "ok": true
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_finder_black_50.png",
+      "decoded": "OCC_BM_4_ET4WRPM3",
+      "ok": true
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 4,
+      "payload": "OCC_BM_4_ET4WRPM3",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/004_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_clean.png",
+      "decoded": "OCC_BM_5_7B6EAVJ4",
+      "ok": true
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_finder_black_20.png",
+      "decoded": "OCC_BM_5_7B6EAVJ4",
+      "ok": true
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_finder_black_35.png",
+      "decoded": "OCC_BM_5_7B6EAVJ4",
+      "ok": true
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_finder_black_50.png",
+      "decoded": "OCC_BM_5_7B6EAVJ4",
+      "ok": true
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 5,
+      "payload": "OCC_BM_5_7B6EAVJ4",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/005_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_clean.png",
+      "decoded": "OCC_BM_6_YKDE5KE9",
+      "ok": true
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_finder_black_20.png",
+      "decoded": "OCC_BM_6_YKDE5KE9",
+      "ok": true
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_finder_black_35.png",
+      "decoded": "OCC_BM_6_YKDE5KE9",
+      "ok": true
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_finder_black_50.png",
+      "decoded": "OCC_BM_6_YKDE5KE9",
+      "ok": true
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 6,
+      "payload": "OCC_BM_6_YKDE5KE9",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/006_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_clean.png",
+      "decoded": "OCC_BM_7_NJBWH7JT",
+      "ok": true
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_finder_black_20.png",
+      "decoded": "OCC_BM_7_NJBWH7JT",
+      "ok": true
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_finder_black_35.png",
+      "decoded": "OCC_BM_7_NJBWH7JT",
+      "ok": true
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_finder_black_50.png",
+      "decoded": "OCC_BM_7_NJBWH7JT",
+      "ok": true
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 7,
+      "payload": "OCC_BM_7_NJBWH7JT",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/007_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_clean.png",
+      "decoded": "OCC_BM_8_3C0RCLRJ",
+      "ok": true
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_finder_black_20.png",
+      "decoded": "OCC_BM_8_3C0RCLRJ",
+      "ok": true
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_finder_black_35.png",
+      "decoded": "OCC_BM_8_3C0RCLRJ",
+      "ok": true
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_finder_black_50.png",
+      "decoded": "OCC_BM_8_3C0RCLRJ",
+      "ok": true
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 8,
+      "payload": "OCC_BM_8_3C0RCLRJ",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/008_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_clean.png",
+      "decoded": "OCC_BM_9_TJ3CYW5V",
+      "ok": true
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_finder_black_20.png",
+      "decoded": "OCC_BM_9_TJ3CYW5V",
+      "ok": true
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_finder_black_35.png",
+      "decoded": "OCC_BM_9_TJ3CYW5V",
+      "ok": true
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_finder_black_50.png",
+      "decoded": "OCC_BM_9_TJ3CYW5V",
+      "ok": true
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 9,
+      "payload": "OCC_BM_9_TJ3CYW5V",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/009_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_clean.png",
+      "decoded": "OCC_BM_10_34C4K272",
+      "ok": true
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_finder_black_20.png",
+      "decoded": "OCC_BM_10_34C4K272",
+      "ok": true
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_finder_black_35.png",
+      "decoded": "OCC_BM_10_34C4K272",
+      "ok": true
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_finder_black_50.png",
+      "decoded": "OCC_BM_10_34C4K272",
+      "ok": true
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 10,
+      "payload": "OCC_BM_10_34C4K272",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/010_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_clean.png",
+      "decoded": "OCC_BM_11_SRHL01H7",
+      "ok": true
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_finder_black_20.png",
+      "decoded": "OCC_BM_11_SRHL01H7",
+      "ok": true
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_finder_black_35.png",
+      "decoded": "OCC_BM_11_SRHL01H7",
+      "ok": true
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_finder_black_50.png",
+      "decoded": "OCC_BM_11_SRHL01H7",
+      "ok": true
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 11,
+      "payload": "OCC_BM_11_SRHL01H7",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/011_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_clean.png",
+      "decoded": "OCC_BM_12_G5YQMWGK",
+      "ok": true
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_finder_black_20.png",
+      "decoded": "OCC_BM_12_G5YQMWGK",
+      "ok": true
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_finder_black_35.png",
+      "decoded": "OCC_BM_12_G5YQMWGK",
+      "ok": true
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_finder_black_50.png",
+      "decoded": "OCC_BM_12_G5YQMWGK",
+      "ok": true
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 12,
+      "payload": "OCC_BM_12_G5YQMWGK",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/012_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_clean.png",
+      "decoded": "OCC_BM_13_RJU2EFZN",
+      "ok": true
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_finder_black_20.png",
+      "decoded": "OCC_BM_13_RJU2EFZN",
+      "ok": true
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_finder_black_35.png",
+      "decoded": "OCC_BM_13_RJU2EFZN",
+      "ok": true
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_finder_black_50.png",
+      "decoded": "OCC_BM_13_RJU2EFZN",
+      "ok": true
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 13,
+      "payload": "OCC_BM_13_RJU2EFZN",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/013_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_clean.png",
+      "decoded": "OCC_BM_14_DSCO6FUT",
+      "ok": true
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_finder_black_20.png",
+      "decoded": "OCC_BM_14_DSCO6FUT",
+      "ok": true
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_finder_black_35.png",
+      "decoded": "OCC_BM_14_DSCO6FUT",
+      "ok": true
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_finder_black_50.png",
+      "decoded": "OCC_BM_14_DSCO6FUT",
+      "ok": true
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 14,
+      "payload": "OCC_BM_14_DSCO6FUT",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/014_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_clean.png",
+      "decoded": "OCC_BM_15_3EQE1MGZ",
+      "ok": true
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_finder_black_20.png",
+      "decoded": "OCC_BM_15_3EQE1MGZ",
+      "ok": true
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_finder_black_35.png",
+      "decoded": "OCC_BM_15_3EQE1MGZ",
+      "ok": true
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_finder_black_50.png",
+      "decoded": "OCC_BM_15_3EQE1MGZ",
+      "ok": true
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 15,
+      "payload": "OCC_BM_15_3EQE1MGZ",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/015_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_clean.png",
+      "decoded": "OCC_BM_16_M36PXN60",
+      "ok": true
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_finder_black_20.png",
+      "decoded": "OCC_BM_16_M36PXN60",
+      "ok": true
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_finder_black_35.png",
+      "decoded": "OCC_BM_16_M36PXN60",
+      "ok": true
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_finder_black_50.png",
+      "decoded": "OCC_BM_16_M36PXN60",
+      "ok": true
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 16,
+      "payload": "OCC_BM_16_M36PXN60",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/016_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_clean.png",
+      "decoded": "OCC_BM_17_LNTDW8J5",
+      "ok": true
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_finder_black_20.png",
+      "decoded": "OCC_BM_17_LNTDW8J5",
+      "ok": true
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_finder_black_35.png",
+      "decoded": "OCC_BM_17_LNTDW8J5",
+      "ok": true
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_finder_black_50.png",
+      "decoded": "OCC_BM_17_LNTDW8J5",
+      "ok": true
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 17,
+      "payload": "OCC_BM_17_LNTDW8J5",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/017_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_clean.png",
+      "decoded": "OCC_BM_18_94VIIDKJ",
+      "ok": true
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_finder_black_20.png",
+      "decoded": "OCC_BM_18_94VIIDKJ",
+      "ok": true
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_finder_black_35.png",
+      "decoded": "OCC_BM_18_94VIIDKJ",
+      "ok": true
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_finder_black_50.png",
+      "decoded": "OCC_BM_18_94VIIDKJ",
+      "ok": true
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 18,
+      "payload": "OCC_BM_18_94VIIDKJ",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/018_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "clean",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_clean.png",
+      "decoded": "OCC_BM_19_8EUKADFJ",
+      "ok": true
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "finder_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_finder_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "finder_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_finder_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "finder_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_finder_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "finder_white_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_finder_white_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "finder_black_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_finder_black_20.png",
+      "decoded": "OCC_BM_19_8EUKADFJ",
+      "ok": true
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "finder_black_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_finder_black_35.png",
+      "decoded": "OCC_BM_19_8EUKADFJ",
+      "ok": true
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "finder_black_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_finder_black_50.png",
+      "decoded": "OCC_BM_19_8EUKADFJ",
+      "ok": true
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "finder_black_70",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_finder_black_70.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "left_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_left_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "left_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_left_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "left_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_left_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "top_edge_white_20",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_top_edge_white_20.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "top_edge_white_35",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_top_edge_white_35.png",
+      "decoded": "decoding failed",
+      "ok": false
+    },
+    {
+      "payload_id": 19,
+      "payload": "OCC_BM_19_8EUKADFJ",
+      "case": "top_edge_white_50",
+      "image": "/workspace/experiments/occlusion_benchmark/improved_images/019_top_edge_white_50.png",
+      "decoded": "decoding failed",
+      "ok": false
+    }
+  ],
+  "summary": {
+    "clean": {
+      "total": 20,
+      "ok": 20,
+      "rate": 1.0
+    },
+    "finder_white_20": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "finder_white_35": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "finder_white_50": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "finder_white_70": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "finder_black_20": {
+      "total": 20,
+      "ok": 20,
+      "rate": 1.0
+    },
+    "finder_black_35": {
+      "total": 20,
+      "ok": 20,
+      "rate": 1.0
+    },
+    "finder_black_50": {
+      "total": 20,
+      "ok": 20,
+      "rate": 1.0
+    },
+    "finder_black_70": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "left_edge_white_20": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "left_edge_white_35": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "left_edge_white_50": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "top_edge_white_20": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "top_edge_white_35": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    },
+    "top_edge_white_50": {
+      "total": 20,
+      "ok": 0,
+      "rate": 0.0
+    }
+  }
+}
