@@ -45,15 +45,18 @@ protected:
   Ref<BitMatrix> image_;
   std::vector<Ref<FinderPattern> > possibleCenters_;
   bool hasSkipped_;
+  bool exhaustiveSearch_;
 
   Ref<ResultPointCallback> callback_;
 
   /** stateCount must be int[5] */
   static float centerFromEnd(int* stateCount, int end);
   static bool foundPatternCross(int* stateCount);
+  static bool foundPatternDiagonal(int* stateCount);
 
   float crossCheckVertical(size_t startI, size_t centerJ, int maxCount, int originalStateCountTotal);
   float crossCheckHorizontal(size_t startJ, size_t centerI, int maxCount, int originalStateCountTotal);
+  bool crossCheckDiagonal(size_t centerI, size_t centerJ);
 
   /** stateCount must be int[5] */
   bool handlePossibleCenter(int* stateCount, size_t i, size_t j);
@@ -67,7 +70,7 @@ protected:
 
 public:
   static float distance(Ref<ResultPoint> p1, Ref<ResultPoint> p2);
-  FinderPatternFinder(Ref<BitMatrix> image, Ref<ResultPointCallback>const&);
+  FinderPatternFinder(Ref<BitMatrix> image, Ref<ResultPointCallback>const&, bool exhaustiveSearch = false);
   Ref<FinderPatternInfo> find(DecodeHints const& hints);
 };
 }

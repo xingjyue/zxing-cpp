@@ -65,9 +65,16 @@ Ref<ResultPointCallback> Detector::getResultPointCallback() const {
 
 Ref<DetectorResult> Detector::detect(DecodeHints const& hints) {
   callback_ = hints.getResultPointCallback();
-  FinderPatternFinder finder(image_, hints.getResultPointCallback());
-  Ref<FinderPatternInfo> info(finder.find(hints));
-  return processFinderPatternInfo(info);
+  try {
+    FinderPatternFinder finder(image_, hints.getResultPointCallback(), false);
+    Ref<FinderPatternInfo> info(finder.find(hints));
+    return processFinderPatternInfo(info);
+  } catch (zxing::ReaderException const&) {
+    // Retry once with exhaustive scanning when regular finder pass fails.
+    FinderPatternFinder finder(image_, hints.getResultPointCallback(), true);
+    Ref<FinderPatternInfo> info(finder.find(hints));
+    return processFinderPatternInfo(info);
+  }
 }
 
 Ref<DetectorResult> Detector::processFinderPatternInfo(Ref<FinderPatternInfo> info){

@@ -1,0 +1,22 @@
+{
+  "clean": {
+    "total": 20,
+    "ok": 20
+  },
+  "finder_gray_50": {
+    "total": 20,
+    "ok": 0
+  },
+  "finder_checker_50": {
+    "total": 20,
+    "ok": 0
+  },
+  "left_edge_gray_20": {
+    "total": 20,
+    "ok": 0
+  },
+  "top_edge_gray_20": {
+    "total": 20,
+    "ok": 0
+  }
+}

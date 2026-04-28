@@ -20,12 +20,14 @@
  */
 
 #include <algorithm>
+#include <limits>
 #include <zxing/qrcode/detector/FinderPatternFinder.h>
 #include <zxing/ReaderException.h>
 #include <zxing/DecodeHints.h>
 
 using std::sort;
 using std::max;
+using std::min;
 using std::abs;
 using std::vector;
 using zxing::Ref;
@@ -42,43 +44,283 @@ using zxing::DecodeHints;
 
 namespace {
 
-class FurthestFromAverageComparator {
-private:
-  const float averageModuleSize_;
+class EstimatedModuleComparator {
 public:
-  FurthestFromAverageComparator(float averageModuleSize) :
-    averageModuleSize_(averageModuleSize) {
-  }
-  bool operator()(Ref<FinderPattern> a, Ref<FinderPattern> b) {
-    float dA = abs(a->getEstimatedModuleSize() - averageModuleSize_);
-    float dB = abs(b->getEstimatedModuleSize() - averageModuleSize_);
-    return dA > dB;
+  bool operator()(Ref<FinderPattern> a, Ref<FinderPattern> b) const {
+    return a->getEstimatedModuleSize() < b->getEstimatedModuleSize();
   }
 };
 
-class CenterComparator {
-  const float averageModuleSize_;
-public:
-  CenterComparator(float averageModuleSize) :
-    averageModuleSize_(averageModuleSize) {
-  }
-  bool operator()(Ref<FinderPattern> a, Ref<FinderPattern> b) {
-    // N.B.: we want the result in descending order ...
-    if (a->getCount() != b->getCount()) {
-      return a->getCount() > b->getCount();
-    } else {
-      float dA = abs(a->getEstimatedModuleSize() - averageModuleSize_);
-      float dB = abs(b->getEstimatedModuleSize() - averageModuleSize_);
-      return dA < dB;
+struct RecoveredPatternCandidate {
+  float x;
+  float y;
+  float moduleSize;
+  float score;
+  bool matched;
+  int inBoundsCorners;
+  float quietScore;
+  float timingScore;
+};
+
+double squaredDistance(Ref<FinderPattern> a, Ref<FinderPattern> b) {
+  double x = a->getX() - b->getX();
+  double y = a->getY() - b->getY();
+  return x * x + y * y;
+}
+
+bool inBounds(const BitMatrix& image, int x, int y)
+{
+  return x >= 0 && y >= 0 && x < (int)image.getWidth() && y < (int)image.getHeight();
+}
+
+float quietZoneScore(const BitMatrix& image, int centerX, int centerY, float moduleSize)
+{
+  int r1 = max(1, (int)(moduleSize * 2.5f));
+  int r2 = max(r1 + 1, (int)(moduleSize * 4.0f));
+  int total = 0;
+  int white = 0;
+  for (int y = centerY - r2; y <= centerY + r2; y++) {
+    for (int x = centerX - r2; x <= centerX + r2; x++) {
+      if (!inBounds(image, x, y)) {
+        continue;
+      }
+      int dx = x - centerX;
+      int dy = y - centerY;
+      int d2 = dx * dx + dy * dy;
+      if (d2 < r1 * r1 || d2 > r2 * r2) {
+        continue;
+      }
+      total++;
+      if (!image.get(x, y)) {
+        white++;
+      }
     }
   }
-};
+  if (total == 0) {
+    return 0.0f;
+  }
+  return (float)white / total;
+}
+
+float timingPatternScore(const BitMatrix& image, int x0, int y0, int x1, int y1)
+{
+  int dx = abs(x1 - x0);
+  int dy = abs(y1 - y0);
+  int steps = max(dx, dy);
+  if (steps < 8) {
+    return 0.0f;
+  }
+
+  int transitions = 0;
+  int samples = 0;
+  int prev = image.get(x0, y0) ? 1 : 0;
+  for (int i = 1; i <= steps; i++) {
+    float t = (float)i / (float)steps;
+    int x = (int)(x0 + t * (x1 - x0) + 0.5f);
+    int y = (int)(y0 + t * (y1 - y0) + 0.5f);
+    if (!inBounds(image, x, y)) {
+      continue;
+    }
+    int cur = image.get(x, y) ? 1 : 0;
+    if (cur != prev) {
+      transitions++;
+      prev = cur;
+    }
+    samples++;
+  }
+  if (samples <= 1) {
+    return 0.0f;
+  }
+  return (float)transitions / (float)(samples - 1);
+}
+
+bool foundFinderLikePattern(const int* stateCount, float varianceDivisor)
+{
+  int totalModuleSize = 0;
+  for (int i = 0; i < 5; i++) {
+    if (stateCount[i] == 0) {
+      return false;
+    }
+    totalModuleSize += stateCount[i];
+  }
+  if (totalModuleSize < 7) {
+    return false;
+  }
+
+  float moduleSize = (float)totalModuleSize / 7.0f;
+  float maxVariance = moduleSize / varianceDivisor;
+  return abs(moduleSize - stateCount[0]) < maxVariance &&
+         abs(moduleSize - stateCount[1]) < maxVariance &&
+         abs(3.0f * moduleSize - stateCount[2]) < 3.0f * maxVariance &&
+         abs(moduleSize - stateCount[3]) < maxVariance &&
+         abs(moduleSize - stateCount[4]) < maxVariance;
+}
+
+bool readAxisStateCount(const BitMatrix& image, int centerX, int centerY, int dx, int dy, int* stateCount)
+{
+  for (int i = 0; i < 5; i++) {
+    stateCount[i] = 0;
+  }
+
+  int x = centerX;
+  int y = centerY;
+  while (inBounds(image, x, y) && image.get(x, y)) {
+    stateCount[2]++;
+    x -= dx;
+    y -= dy;
+  }
+  while (inBounds(image, x, y) && !image.get(x, y)) {
+    stateCount[1]++;
+    x -= dx;
+    y -= dy;
+  }
+  while (inBounds(image, x, y) && image.get(x, y)) {
+    stateCount[0]++;
+    x -= dx;
+    y -= dy;
+  }
+
+  x = centerX + dx;
+  y = centerY + dy;
+  while (inBounds(image, x, y) && image.get(x, y)) {
+    stateCount[2]++;
+    x += dx;
+    y += dy;
+  }
+  while (inBounds(image, x, y) && !image.get(x, y)) {
+    stateCount[3]++;
+    x += dx;
+    y += dy;
+  }
+  while (inBounds(image, x, y) && image.get(x, y)) {
+    stateCount[4]++;
+    x += dx;
+    y += dy;
+  }
+
+  return stateCount[0] > 0 && stateCount[1] > 0 && stateCount[2] > 0 && stateCount[3] > 0 && stateCount[4] > 0;
+}
+
+float patternDeviation(const int* stateCount)
+{
+  int total = 0;
+  for (int i = 0; i < 5; i++) {
+    total += stateCount[i];
+  }
+  if (total < 7) {
+    return std::numeric_limits<float>::max();
+  }
+  float module = (float)total / 7.0f;
+  float expected[5] = {module, module, 3.0f * module, module, module};
+  float error = 0.0f;
+  for (int i = 0; i < 5; i++) {
+    error += abs(stateCount[i] - expected[i]) / expected[i];
+  }
+  return error;
+}
+
+RecoveredPatternCandidate evaluateRecoveredCandidate(const BitMatrix& image, Ref<FinderPattern> a, Ref<FinderPattern> b,
+                                                     float estX, float estY, float moduleSize)
+{
+  RecoveredPatternCandidate result;
+  result.x = estX;
+  result.y = estY;
+  result.moduleSize = moduleSize;
+  result.score = std::numeric_limits<float>::max();
+  result.matched = false;
+  result.inBoundsCorners = 0;
+  result.quietScore = 0.0f;
+  result.timingScore = 0.0f;
+
+  int cX = (int)(estX + 0.5f);
+  int cY = (int)(estY + 0.5f);
+  if (inBounds(image, cX, cY)) {
+    result.inBoundsCorners++;
+  }
+
+  float dX = b->getX() + estX - a->getX();
+  float dY = b->getY() + estY - a->getY();
+  if (inBounds(image, (int)(dX + 0.5f), (int)(dY + 0.5f))) {
+    result.inBoundsCorners++;
+  }
+
+  int searchRadius = max(2, (int)(moduleSize * 4.0f));
+  int estXi = (int)(estX + 0.5f);
+  int estYi = (int)(estY + 0.5f);
+  for (int dy = -searchRadius; dy <= searchRadius; dy++) {
+    for (int dx = -searchRadius; dx <= searchRadius; dx++) {
+      int x = estXi + dx;
+      int y = estYi + dy;
+      if (!inBounds(image, x, y) || !image.get(x, y)) {
+        continue;
+      }
+
+      int horizontal[5];
+      int vertical[5];
+      if (!readAxisStateCount(image, x, y, 1, 0, horizontal) || !readAxisStateCount(image, x, y, 0, 1, vertical)) {
+        continue;
+      }
+
+      if (!foundFinderLikePattern(horizontal, 1.4f) || !foundFinderLikePattern(vertical, 1.4f)) {
+        continue;
+      }
+
+      float score = patternDeviation(horizontal) + patternDeviation(vertical);
+      float qScore = quietZoneScore(image, x, y, moduleSize);
+      float tScoreA = timingPatternScore(image, x, y, (int)(a->getX() + 0.5f), (int)(a->getY() + 0.5f));
+      float tScoreB = timingPatternScore(image, x, y, (int)(b->getX() + 0.5f), (int)(b->getY() + 0.5f));
+      float tScore = max(tScoreA, tScoreB);
+      // Encourage candidates with surrounding white quiet area and alternating timing-like transitions.
+      score -= 0.8f * qScore;
+      score -= 0.6f * tScore;
+      float offsetPenalty = (float)(dx * dx + dy * dy) / (moduleSize * moduleSize + 1.0f);
+      score += 0.05f * offsetPenalty;
+      if (score < result.score) {
+        result.score = score;
+        result.x = (float)x;
+        result.y = (float)y;
+        result.moduleSize = (float)(horizontal[0] + horizontal[1] + horizontal[2] + horizontal[3] + horizontal[4]) / 7.0f;
+        result.matched = true;
+        result.quietScore = qScore;
+        result.timingScore = tScore;
+      }
+    }
+  }
+
+  if (!result.matched) {
+    // Keep deterministic ordering for synthetic fallback.
+    float imageCx = (image.getWidth() - 1) / 2.0f;
+    float imageCy = (image.getHeight() - 1) / 2.0f;
+    float dx = estX - imageCx;
+    float dy = estY - imageCy;
+    result.score = dx * dx + dy * dy;
+  }
+
+  return result;
+}
+
+bool isBetterRecoveredCandidate(const RecoveredPatternCandidate& a, const RecoveredPatternCandidate& b)
+{
+  if (a.matched != b.matched) {
+    return a.matched;
+  }
+  if (abs(a.quietScore - b.quietScore) > 0.05f) {
+    return a.quietScore > b.quietScore;
+  }
+  if (abs(a.timingScore - b.timingScore) > 0.02f) {
+    return a.timingScore > b.timingScore;
+  }
+  if (a.inBoundsCorners != b.inBoundsCorners) {
+    return a.inBoundsCorners > b.inBoundsCorners;
+  }
+  return a.score < b.score;
+}
 
 }
 
 int FinderPatternFinder::CENTER_QUORUM = 2;
 int FinderPatternFinder::MIN_SKIP = 3;
-int FinderPatternFinder::MAX_MODULES = 57;
+int FinderPatternFinder::MAX_MODULES = 97;
 
 float FinderPatternFinder::centerFromEnd(int* stateCount, int end) {
   return (float)(end - stateCount[4] - stateCount[3]) - stateCount[2] / 2.0f;
@@ -98,6 +340,25 @@ bool FinderPatternFinder::foundPatternCross(int* stateCount) {
   float moduleSize = (float)totalModuleSize / 7.0f;
   float maxVariance = moduleSize / 2.0f;
   // Allow less than 50% variance from 1-1-3-1-1 proportions
+  return abs(moduleSize - stateCount[0]) < maxVariance && abs(moduleSize - stateCount[1]) < maxVariance && abs(3.0f
+         * moduleSize - stateCount[2]) < 3.0f * maxVariance && abs(moduleSize - stateCount[3]) < maxVariance && abs(
+           moduleSize - stateCount[4]) < maxVariance;
+}
+
+bool FinderPatternFinder::foundPatternDiagonal(int* stateCount) {
+  int totalModuleSize = 0;
+  for (int i = 0; i < 5; i++) {
+    if (stateCount[i] == 0) {
+      return false;
+    }
+    totalModuleSize += stateCount[i];
+  }
+  if (totalModuleSize < 7) {
+    return false;
+  }
+  float moduleSize = (float)totalModuleSize / 7.0f;
+  float maxVariance = moduleSize / 1.333f;
+  // Allow less than 75% variance from 1-1-3-1-1 proportions.
   return abs(moduleSize - stateCount[0]) < maxVariance && abs(moduleSize - stateCount[1]) < maxVariance && abs(3.0f
          * moduleSize - stateCount[2]) < 3.0f * maxVariance && abs(moduleSize - stateCount[3]) < maxVariance && abs(
            moduleSize - stateCount[4]) < maxVariance;
@@ -234,6 +495,66 @@ float FinderPatternFinder::crossCheckHorizontal(size_t startJ, size_t centerI, i
   return foundPatternCross(stateCount) ? centerFromEnd(stateCount, j) : nan();
 }
 
+bool FinderPatternFinder::crossCheckDiagonal(size_t centerI, size_t centerJ) {
+  int stateCount[5] = {0, 0, 0, 0, 0};
+
+  // Start counting up-left from center finding black center mass.
+  size_t i = 0;
+  while (centerI >= i && centerJ >= i && image_->get(centerJ - i, centerI - i)) {
+    stateCount[2]++;
+    i++;
+  }
+  if (stateCount[2] == 0) {
+    return false;
+  }
+
+  // Continue up-left finding white ring.
+  while (centerI >= i && centerJ >= i && !image_->get(centerJ - i, centerI - i)) {
+    stateCount[1]++;
+    i++;
+  }
+  if (stateCount[1] == 0) {
+    return false;
+  }
+
+  // Continue up-left finding black ring.
+  while (centerI >= i && centerJ >= i && image_->get(centerJ - i, centerI - i)) {
+    stateCount[0]++;
+    i++;
+  }
+  if (stateCount[0] == 0) {
+    return false;
+  }
+
+  size_t maxI = image_->getHeight();
+  size_t maxJ = image_->getWidth();
+
+  // Now count down-right from center.
+  i = 1;
+  while (centerI + i < maxI && centerJ + i < maxJ && image_->get(centerJ + i, centerI + i)) {
+    stateCount[2]++;
+    i++;
+  }
+
+  while (centerI + i < maxI && centerJ + i < maxJ && !image_->get(centerJ + i, centerI + i)) {
+    stateCount[3]++;
+    i++;
+  }
+  if (stateCount[3] == 0) {
+    return false;
+  }
+
+  while (centerI + i < maxI && centerJ + i < maxJ && image_->get(centerJ + i, centerI + i)) {
+    stateCount[4]++;
+    i++;
+  }
+  if (stateCount[4] == 0) {
+    return false;
+  }
+
+  return foundPatternDiagonal(stateCount);
+}
+
 bool FinderPatternFinder::handlePossibleCenter(int* stateCount, size_t i, size_t j) {
   int stateCountTotal = stateCount[0] + stateCount[1] + stateCount[2] + stateCount[3] + stateCount[4];
   float centerJ = centerFromEnd(stateCount, j);
@@ -241,7 +562,7 @@ bool FinderPatternFinder::handlePossibleCenter(int* stateCount, size_t i, size_t
   if (!isnan(centerI)) {
     // Re-cross check
     centerJ = crossCheckHorizontal((size_t)centerJ, (size_t)centerI, stateCount[2], stateCountTotal);
-    if (!isnan(centerJ)) {
+    if (!isnan(centerJ) && crossCheckDiagonal((size_t)centerI, (size_t)centerJ)) {
       float estimatedModuleSize = (float)stateCountTotal / 7.0f;
       bool found = false;
       size_t max = possibleCenters_.size();
@@ -321,57 +642,140 @@ bool FinderPatternFinder::haveMultiplyConfirmedCenters() {
 }
 
 vector< Ref<FinderPattern> > FinderPatternFinder::selectBestPatterns() {
-  size_t startSize = possibleCenters_.size();
-
-  if (startSize < 3) {
-    // Couldn't find enough finder patterns
-    throw zxing::ReaderException("Could not find three finder patterns");
+  if (possibleCenters_.size() < 2) {
+    throw zxing::ReaderException("Could not find enough finder patterns");
   }
 
-  // Filter outlier possibilities whose module size is too different
-  if (startSize > 3) {
-    // But we can only afford to do so if we have at least 4 possibilities to choose from
-    float totalModuleSize = 0.0f;
-    float square = 0.0f;
-    for (size_t i = 0; i < startSize; i++) {
-      float size = possibleCenters_[i]->getEstimatedModuleSize();
-      totalModuleSize += size;
-      square += size * size;
+  vector<Ref<FinderPattern> > confirmedCenters;
+  confirmedCenters.reserve(possibleCenters_.size());
+  for (size_t i = 0; i < possibleCenters_.size(); i++) {
+    if (possibleCenters_[i]->getCount() >= CENTER_QUORUM) {
+      confirmedCenters.push_back(possibleCenters_[i]);
     }
-    float average = totalModuleSize / (float) startSize;
-    float stdDev = (float)sqrt(square / startSize - average * average);
+  }
 
-    sort(possibleCenters_.begin(), possibleCenters_.end(), FurthestFromAverageComparator(average));
-    
-    float limit = max(0.2f * average, stdDev);
+  vector<Ref<FinderPattern> > candidates = confirmedCenters.size() >= 3 ? confirmedCenters : possibleCenters_;
 
-    for (size_t i = 0; i < possibleCenters_.size() && possibleCenters_.size() > 3; i++) {
-      if (abs(possibleCenters_[i]->getEstimatedModuleSize() - average) > limit) {
-        possibleCenters_.erase(possibleCenters_.begin()+i);
-        i--;
+  if (candidates.size() >= 3) {
+    // Sort by module size so we can prune combinations whose sizes are too dissimilar.
+    sort(candidates.begin(), candidates.end(), EstimatedModuleComparator());
+
+    double bestDistortion = std::numeric_limits<double>::max();
+    vector<Ref<FinderPattern> > bestPatterns(3);
+
+    for (size_t i = 0; i + 2 < candidates.size(); i++) {
+      Ref<FinderPattern> fpi = candidates[i];
+      float minModuleSize = fpi->getEstimatedModuleSize();
+
+      for (size_t j = i + 1; j + 1 < candidates.size(); j++) {
+        Ref<FinderPattern> fpj = candidates[j];
+        double squares0 = squaredDistance(fpi, fpj);
+
+        for (size_t k = j + 1; k < candidates.size(); k++) {
+          Ref<FinderPattern> fpk = candidates[k];
+          float maxModuleSize = fpk->getEstimatedModuleSize();
+          if (maxModuleSize > minModuleSize * 1.8f) {
+            break;
+          }
+
+          double a = squares0;
+          double b = squaredDistance(fpj, fpk);
+          double c = squaredDistance(fpi, fpk);
+
+          // Sort a,b,c ascending (inlined, branch-light).
+          if (a < b) {
+            if (b > c) {
+              if (a < c) {
+                double t = b;
+                b = c;
+                c = t;
+              } else {
+                double t = a;
+                a = c;
+                c = b;
+                b = t;
+              }
+            }
+          } else {
+            if (b < c) {
+              if (a < c) {
+                double t = a;
+                a = b;
+                b = t;
+              } else {
+                double t = a;
+                a = b;
+                b = c;
+                c = t;
+              }
+            } else {
+              double t = a;
+              a = c;
+              c = t;
+            }
+          }
+
+          // Finder patterns should form an isosceles-right triangle.
+          double distortion = abs(c - 2 * b) + abs(c - 2 * a);
+          if (distortion < bestDistortion) {
+            bestDistortion = distortion;
+            bestPatterns[0] = fpi;
+            bestPatterns[1] = fpj;
+            bestPatterns[2] = fpk;
+          }
+        }
+      }
+    }
+
+    if (bestDistortion != std::numeric_limits<double>::max()) {
+      return bestPatterns;
+    }
+  }
+
+  // Recover missing finder pattern by copying/extrapolating from the best two detected "hui" patterns.
+  double bestPairScore = -1.0;
+  Ref<FinderPattern> bestA;
+  Ref<FinderPattern> bestB;
+  for (size_t i = 0; i + 1 < possibleCenters_.size(); i++) {
+    for (size_t j = i + 1; j < possibleCenters_.size(); j++) {
+      Ref<FinderPattern> a = possibleCenters_[i];
+      Ref<FinderPattern> b = possibleCenters_[j];
+      float minSize = std::min(a->getEstimatedModuleSize(), b->getEstimatedModuleSize());
+      float maxSize = max(a->getEstimatedModuleSize(), b->getEstimatedModuleSize());
+      if (minSize <= 0.0f || maxSize > minSize * 2.2f) {
+        continue;
+      }
+      double dist = squaredDistance(a, b);
+      if (dist < (double)(minSize * minSize * 9.0f)) {
+        continue;
+      }
+      double pairScore = a->getCount() + b->getCount() - abs(a->getEstimatedModuleSize() - b->getEstimatedModuleSize()) / maxSize;
+      if (pairScore > bestPairScore) {
+        bestPairScore = pairScore;
+        bestA = a;
+        bestB = b;
       }
     }
   }
-
-  if (possibleCenters_.size() > 3) {
-    // Throw away all but those first size candidate points we found.
-    float totalModuleSize = 0.0f;
-    for (size_t i = 0; i < possibleCenters_.size(); i++) {
-      float size = possibleCenters_[i]->getEstimatedModuleSize();
-      totalModuleSize += size;
-    }
-    float average = totalModuleSize / (float) possibleCenters_.size();
-    sort(possibleCenters_.begin(), possibleCenters_.end(), CenterComparator(average));
+  if (bestA == 0 || bestB == 0) {
+    throw zxing::ReaderException("Could not recover missing finder pattern");
   }
 
-  if (possibleCenters_.size() > 3) {
-    possibleCenters_.erase(possibleCenters_.begin()+3,possibleCenters_.end());
-  }
+  float avgModuleSize = (bestA->getEstimatedModuleSize() + bestB->getEstimatedModuleSize()) / 2.0f;
+  float vx = bestB->getX() - bestA->getX();
+  float vy = bestB->getY() - bestA->getY();
 
+  RecoveredPatternCandidate candidate1 = evaluateRecoveredCandidate(*image_, bestA, bestB, bestA->getX() - vy,
+                                                                    bestA->getY() + vx, avgModuleSize);
+  RecoveredPatternCandidate candidate2 = evaluateRecoveredCandidate(*image_, bestA, bestB, bestA->getX() + vy,
+                                                                    bestA->getY() - vx, avgModuleSize);
+  RecoveredPatternCandidate bestRecovered = isBetterRecoveredCandidate(candidate1, candidate2) ? candidate1 : candidate2;
+
+  Ref<FinderPattern> recovered(new FinderPattern(bestRecovered.x, bestRecovered.y, bestRecovered.moduleSize));
   vector<Ref<FinderPattern> > result(3);
-  result[0] = possibleCenters_[0];
-  result[1] = possibleCenters_[1];
-  result[2] = possibleCenters_[2];
+  result[0] = bestA;
+  result[1] = bestB;
+  result[2] = recovered;
   return result;
 }
 
@@ -424,8 +828,9 @@ float FinderPatternFinder::distance(Ref<ResultPoint> p1, Ref<ResultPoint> p2) {
 }
 
 FinderPatternFinder::FinderPatternFinder(Ref<BitMatrix> image,
-                                           Ref<ResultPointCallback>const& callback) :
-    image_(image), possibleCenters_(), hasSkipped_(false), callback_(callback) {
+                                         Ref<ResultPointCallback>const& callback,
+                                         bool exhaustiveSearch) :
+    image_(image), possibleCenters_(), hasSkipped_(false), exhaustiveSearch_(exhaustiveSearch), callback_(callback) {
 }
 
 Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
@@ -449,8 +854,8 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
   // could be, so skip this often. When trying harder, look for all
   // QR versions regardless of how dense they are.
   int iSkip = (3 * maxI) / (4 * MAX_MODULES);
-  if (iSkip < MIN_SKIP || tryHarder) {
-      iSkip = MIN_SKIP;
+  if (iSkip < MIN_SKIP || tryHarder || exhaustiveSearch_) {
+    iSkip = MIN_SKIP;
   }
 
   // This is slightly faster than using the Ref. Efficiency is important here
@@ -475,13 +880,19 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
       } else { // White pixel
         if ((currentState & 1) == 0) { // Counting black pixels
           if (currentState == 4) { // A winner?
-            if (foundPatternCross(stateCount)) { // Yes
+            bool foundCross = foundPatternCross(stateCount);
+            // Fallback for degraded images: allow a looser ratio early, then rely on
+            // vertical/horizontal/diagonal cross-checks plus geometry ranking to reject noise.
+            if (!foundCross && possibleCenters_.size() < 3) {
+              foundCross = foundPatternDiagonal(stateCount);
+            }
+            if (foundCross) { // Yes
               bool confirmed = handlePossibleCenter(stateCount, i, j);
               if (confirmed) {
                 // Start examining every other line. Checking each line turned out to be too
                 // expensive and didn't improve performance.
                 iSkip = 2;
-                if (hasSkipped_) {
+                if (hasSkipped_ && !exhaustiveSearch_) {
                   done = haveMultiplyConfirmedCenters();
                 } else {
                   int rowSkip = findRowSkip();
@@ -531,11 +942,15 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
         }
       }
     }
-    if (foundPatternCross(stateCount)) {
+    bool foundCross = foundPatternCross(stateCount);
+    if (!foundCross && possibleCenters_.size() < 3) {
+      foundCross = foundPatternDiagonal(stateCount);
+    }
+    if (foundCross) {
       bool confirmed = handlePossibleCenter(stateCount, i, maxJ);
       if (confirmed) {
         iSkip = stateCount[0];
-        if (hasSkipped_) {
+        if (hasSkipped_ && !exhaustiveSearch_) {
           // Found a third one
           done = haveMultiplyConfirmedCenters();
         }
