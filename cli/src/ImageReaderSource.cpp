@@ -40,6 +40,13 @@ struct Component {
   int area;
 };
 
+struct VersionOneGrid {
+  int moduleSize;
+  int left;
+  int top;
+  float score;
+};
+
 inline unsigned char luminanceAt(zxing::ArrayRef<char> const& image, int width, int comps, int x, int y) {
   unsigned char const* pixel = reinterpret_cast<unsigned char const*>(&image[(y * width + x) * comps]);
   if (comps == 1 || comps == 2) {
@@ -101,6 +108,173 @@ void drawFinderPattern(zxing::ArrayRef<char>& image, int width, int height, int 
     for (int x = left + moduleSize * 2; x < left + moduleSize * 5; x++) {
       setPixel(image, width, comps, x, y, 0);
     }
+  }
+}
+
+void drawModule(zxing::ArrayRef<char>& image, int width, int height, int comps,
+                int gridLeft, int gridTop, int moduleSize, int moduleX, int moduleY,
+                unsigned char value) {
+  int left = gridLeft + moduleX * moduleSize;
+  int top = gridTop + moduleY * moduleSize;
+  if (left < 0 || top < 0 || left + moduleSize > width || top + moduleSize > height) {
+    return;
+  }
+
+  for (int y = top; y < top + moduleSize; y++) {
+    for (int x = left; x < left + moduleSize; x++) {
+      setPixel(image, width, comps, x, y, value);
+    }
+  }
+}
+
+bool versionOneFixedModule(int moduleX, int moduleY, bool& isBlack) {
+  const int finderLeft[3] = {0, 14, 0};
+  const int finderTop[3] = {0, 0, 14};
+  for (int i = 0; i < 3; i++) {
+    int localX = moduleX - finderLeft[i];
+    int localY = moduleY - finderTop[i];
+    if (localX >= 0 && localX < 7 && localY >= 0 && localY < 7) {
+      isBlack = localX == 0 || localX == 6 || localY == 0 || localY == 6 ||
+          (localX >= 2 && localX <= 4 && localY >= 2 && localY <= 4);
+      return true;
+    }
+  }
+
+  if (moduleY == 6 && moduleX >= 8 && moduleX <= 12) {
+    isBlack = (moduleX & 1) == 0;
+    return true;
+  }
+  if (moduleX == 6 && moduleY >= 8 && moduleY <= 12) {
+    isBlack = (moduleY & 1) == 0;
+    return true;
+  }
+  return false;
+}
+
+int estimateModuleSize(zxing::ArrayRef<char> const& image, int width, int height, int comps) {
+  int maxLength = std::max(width, height);
+  std::vector<int> histogram(maxLength + 1, 0);
+  int minRun = std::max(3, std::min(width, height) / 80);
+  int maxRun = std::max(minRun, std::min(width, height) / 3);
+
+  for (int y = 5; y < height - 5; y++) {
+    for (int x = 0; x < width; ) {
+      while (x < width && luminanceAt(image, width, comps, x, y) >= 80) {
+        x++;
+      }
+      int start = x;
+      while (x < width && luminanceAt(image, width, comps, x, y) < 80) {
+        x++;
+      }
+      int run = x - start;
+      if (run >= minRun && run <= maxRun) {
+        histogram[run]++;
+      }
+    }
+  }
+
+  for (int x = 5; x < width - 5; x++) {
+    for (int y = 0; y < height; ) {
+      while (y < height && luminanceAt(image, width, comps, x, y) >= 80) {
+        y++;
+      }
+      int start = y;
+      while (y < height && luminanceAt(image, width, comps, x, y) < 80) {
+        y++;
+      }
+      int run = y - start;
+      if (run >= minRun && run <= maxRun) {
+        histogram[run]++;
+      }
+    }
+  }
+
+  int bestRun = 0;
+  int bestCount = 0;
+  for (size_t i = 0; i < histogram.size(); i++) {
+    if (histogram[i] > bestCount) {
+      bestRun = (int)i;
+      bestCount = histogram[i];
+    }
+  }
+  return bestRun;
+}
+
+float scoreVersionOneGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
+                          int gridLeft, int gridTop, int moduleSize) {
+  int matches = 0;
+  int total = 0;
+  for (int moduleY = 0; moduleY < 21; moduleY++) {
+    for (int moduleX = 0; moduleX < 21; moduleX++) {
+      bool expectedBlack = false;
+      if (!versionOneFixedModule(moduleX, moduleY, expectedBlack)) {
+        continue;
+      }
+
+      int sampleX = gridLeft + moduleX * moduleSize + moduleSize / 2;
+      int sampleY = gridTop + moduleY * moduleSize + moduleSize / 2;
+      if (sampleX < 0 || sampleY < 0 || sampleX >= width || sampleY >= height) {
+        continue;
+      }
+
+      bool actualBlack = luminanceAt(image, width, comps, sampleX, sampleY) < 80;
+      if (actualBlack == expectedBlack) {
+        matches++;
+      }
+      total++;
+    }
+  }
+  return total == 0 ? 0.0f : (float)matches / (float)total;
+}
+
+VersionOneGrid findBestVersionOneGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps) {
+  VersionOneGrid best = {0, 0, 0, 0.0f};
+  int estimatedModuleSize = estimateModuleSize(image, width, height, comps);
+  if (estimatedModuleSize < 3) {
+    return best;
+  }
+
+  for (int moduleSize = std::max(3, estimatedModuleSize - 1);
+       moduleSize <= estimatedModuleSize + 1; moduleSize++) {
+    int qrSize = 21 * moduleSize;
+    if (qrSize > width || qrSize > height) {
+      continue;
+    }
+
+    int maxLeft = width - qrSize;
+    int maxTop = height - qrSize;
+    for (int top = 0; top <= maxTop; top++) {
+      for (int left = 0; left <= maxLeft; left++) {
+        float score = scoreVersionOneGrid(image, width, height, comps, left, top, moduleSize);
+        if (score > best.score || (std::abs(score - best.score) < 0.0001f && moduleSize > best.moduleSize)) {
+          best.moduleSize = moduleSize;
+          best.left = left;
+          best.top = top;
+          best.score = score;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+void repairVersionOneFixedPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
+  VersionOneGrid grid = findBestVersionOneGrid(image, width, height, comps);
+  if (grid.score < 0.55f) {
+    return;
+  }
+
+  drawFinderPattern(image, width, height, comps,
+      grid.left, grid.top, grid.moduleSize);
+  drawFinderPattern(image, width, height, comps,
+      grid.left + 14 * grid.moduleSize, grid.top, grid.moduleSize);
+  drawFinderPattern(image, width, height, comps,
+      grid.left, grid.top + 14 * grid.moduleSize, grid.moduleSize);
+
+  for (int i = 8; i <= 12; i++) {
+    unsigned char value = (i & 1) == 0 ? 0 : 255;
+    drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize, i, 6, value);
+    drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize, 6, i, value);
   }
 }
 
@@ -245,6 +419,7 @@ Ref<LuminanceSource> ImageReaderSource::create(string const& filename) {
     throw zxing::IllegalArgumentException(msg.str().c_str());
   }
 
+  repairVersionOneFixedPatterns(image, width, height, comps);
   repairLeftDamagedFinderPatterns(image, width, height, comps);
 
   return Ref<LuminanceSource>(new ImageReaderSource(image, width, height, comps));
