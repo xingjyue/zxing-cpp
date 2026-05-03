@@ -30,6 +30,7 @@ private:
 
 public:
   static zxing::Ref<LuminanceSource> create(std::string const& filename);
+  static zxing::Ref<LuminanceSource> create(std::string const& filename, bool repairFixedPatterns);
 
   ImageReaderSource(zxing::ArrayRef<char> image, int width, int height, int comps);
 

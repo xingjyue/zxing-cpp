@@ -300,6 +300,17 @@ int main(int argc, char** argv) {
     if (hresult != 0 && gresult != 0 && !try_harder) {
       attempt_decode(true);
     }
+    if (hresult != 0 && gresult != 0) {
+      try {
+        source = ImageReaderSource::create(filename, true);
+        attempt_decode(try_harder);
+        if (hresult != 0 && gresult != 0 && !try_harder) {
+          attempt_decode(true);
+        }
+      } catch (const zxing::IllegalArgumentException &e) {
+        cerr << e.what() << " (ignoring repair attempt)" << endl;
+      }
+    }
     if (!verbose && hresult != 0 && gresult != 0) {
       cout << "decoding failed" << endl;
     }

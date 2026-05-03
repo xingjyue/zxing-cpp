@@ -16,6 +16,7 @@
 
 #include "ImageReaderSource.h"
 #include <zxing/common/IllegalArgumentException.h>
+#include <zxing/qrcode/Version.h>
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
@@ -40,7 +41,9 @@ struct Component {
   int area;
 };
 
-struct VersionOneGrid {
+struct QRGrid {
+  int version;
+  int dimension;
   int moduleSize;
   int left;
   int top;
@@ -127,27 +130,67 @@ void drawModule(zxing::ArrayRef<char>& image, int width, int height, int comps,
   }
 }
 
-bool versionOneFixedModule(int moduleX, int moduleY, bool& isBlack) {
-  const int finderLeft[3] = {0, 14, 0};
-  const int finderTop[3] = {0, 0, 14};
+bool finderModule(int localX, int localY, bool& isBlack) {
+  if (localX >= 0 && localX < 7 && localY >= 0 && localY < 7) {
+    isBlack = localX == 0 || localX == 6 || localY == 0 || localY == 6 ||
+        (localX >= 2 && localX <= 4 && localY >= 2 && localY <= 4);
+    return true;
+  }
+  return false;
+}
+
+bool alignmentModule(int localX, int localY, bool& isBlack) {
+  if (localX >= -2 && localX <= 2 && localY >= -2 && localY <= 2) {
+    int x = localX + 2;
+    int y = localY + 2;
+    isBlack = x == 0 || x == 4 || y == 0 || y == 4 || (x == 2 && y == 2);
+    return true;
+  }
+  return false;
+}
+
+bool fixedModuleForVersion(int version, int moduleX, int moduleY, bool& isBlack) {
+  int dimension = 17 + 4 * version;
+  const int finderLeft[3] = {0, dimension - 7, 0};
+  const int finderTop[3] = {0, 0, dimension - 7};
   for (int i = 0; i < 3; i++) {
-    int localX = moduleX - finderLeft[i];
-    int localY = moduleY - finderTop[i];
-    if (localX >= 0 && localX < 7 && localY >= 0 && localY < 7) {
-      isBlack = localX == 0 || localX == 6 || localY == 0 || localY == 6 ||
-          (localX >= 2 && localX <= 4 && localY >= 2 && localY <= 4);
+    if (finderModule(moduleX - finderLeft[i], moduleY - finderTop[i], isBlack)) {
       return true;
     }
   }
 
-  if (moduleY == 6 && moduleX >= 8 && moduleX <= 12) {
+  if (moduleY == 6 && moduleX >= 8 && moduleX <= dimension - 9) {
     isBlack = (moduleX & 1) == 0;
     return true;
   }
-  if (moduleX == 6 && moduleY >= 8 && moduleY <= 12) {
+  if (moduleX == 6 && moduleY >= 8 && moduleY <= dimension - 9) {
     isBlack = (moduleY & 1) == 0;
     return true;
   }
+
+  if (moduleX == 8 && moduleY == dimension - 8) {
+    isBlack = true;
+    return true;
+  }
+
+  if (version > 1) {
+    zxing::qrcode::Version *qrVersion = zxing::qrcode::Version::getVersionForNumber(version);
+    std::vector<int> &centers = qrVersion->getAlignmentPatternCenters();
+    for (size_t y = 0; y < centers.size(); y++) {
+      for (size_t x = 0; x < centers.size(); x++) {
+        bool nearTopLeft = x == 0 && y == 0;
+        bool nearTopRight = x == centers.size() - 1 && y == 0;
+        bool nearBottomLeft = x == 0 && y == centers.size() - 1;
+        if (nearTopLeft || nearTopRight || nearBottomLeft) {
+          continue;
+        }
+        if (alignmentModule(moduleX - centers[x], moduleY - centers[y], isBlack)) {
+          return true;
+        }
+      }
+    }
+  }
+
   return false;
 }
 
@@ -200,14 +243,39 @@ int estimateModuleSize(zxing::ArrayRef<char> const& image, int width, int height
   return bestRun;
 }
 
-float scoreVersionOneGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                          int gridLeft, int gridTop, int moduleSize) {
+int estimateContentDimension(zxing::ArrayRef<char> const& image, int width, int height, int comps, int moduleSize) {
+  int minX = width;
+  int minY = height;
+  int maxX = -1;
+  int maxY = -1;
+  int border = 5;
+  for (int y = border; y < height - border; y++) {
+    for (int x = border; x < width - border; x++) {
+      if (luminanceAt(image, width, comps, x, y) < 80) {
+        minX = std::min(minX, x);
+        minY = std::min(minY, y);
+        maxX = std::max(maxX, x);
+        maxY = std::max(maxY, y);
+      }
+    }
+  }
+  if (maxX < minX || maxY < minY || moduleSize <= 0) {
+    return 0;
+  }
+
+  int contentSpan = std::max(maxX - minX + 1, maxY - minY + 1);
+  return (contentSpan + moduleSize / 2) / moduleSize;
+}
+
+float scoreQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
+                  int version, int gridLeft, int gridTop, int moduleSize) {
   int matches = 0;
   int total = 0;
-  for (int moduleY = 0; moduleY < 21; moduleY++) {
-    for (int moduleX = 0; moduleX < 21; moduleX++) {
+  int dimension = 17 + 4 * version;
+  for (int moduleY = 0; moduleY < dimension; moduleY++) {
+    for (int moduleX = 0; moduleX < dimension; moduleX++) {
       bool expectedBlack = false;
-      if (!versionOneFixedModule(moduleX, moduleY, expectedBlack)) {
+      if (!fixedModuleForVersion(version, moduleX, moduleY, expectedBlack)) {
         continue;
       }
 
@@ -227,59 +295,165 @@ float scoreVersionOneGrid(zxing::ArrayRef<char> const& image, int width, int hei
   return total == 0 ? 0.0f : (float)matches / (float)total;
 }
 
-VersionOneGrid findBestVersionOneGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps) {
-  VersionOneGrid best = {0, 0, 0, 0.0f};
+void refineQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
+                  int version, int moduleSize, int centerLeft, int centerTop, int radius,
+                  QRGrid& best) {
+  int dimension = 17 + 4 * version;
+  int qrSize = dimension * moduleSize;
+  if (qrSize > width || qrSize > height) {
+    return;
+  }
+
+  int minLeft = std::max(0, centerLeft - radius);
+  int maxLeft = std::min(width - qrSize, centerLeft + radius);
+  int minTop = std::max(0, centerTop - radius);
+  int maxTop = std::min(height - qrSize, centerTop + radius);
+  for (int top = minTop; top <= maxTop; top++) {
+    for (int left = minLeft; left <= maxLeft; left++) {
+      float score = scoreQRGrid(image, width, height, comps, version, left, top, moduleSize);
+      if (score > best.score ||
+          (std::abs(score - best.score) < 0.0001f &&
+           (best.dimension == 0 || dimension < best.dimension ||
+            (dimension == best.dimension && moduleSize > best.moduleSize)))) {
+        best.version = version;
+        best.dimension = dimension;
+        best.moduleSize = moduleSize;
+        best.left = left;
+        best.top = top;
+        best.score = score;
+      }
+    }
+  }
+}
+
+QRGrid findBestQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps) {
+  QRGrid best = {0, 0, 0, 0, 0, 0.0f};
   int estimatedModuleSize = estimateModuleSize(image, width, height, comps);
   if (estimatedModuleSize < 3) {
     return best;
   }
 
-  for (int moduleSize = std::max(3, estimatedModuleSize - 1);
-       moduleSize <= estimatedModuleSize + 1; moduleSize++) {
-    int qrSize = 21 * moduleSize;
-    if (qrSize > width || qrSize > height) {
-      continue;
-    }
+  for (int moduleSize = std::max(3, estimatedModuleSize - 2);
+       moduleSize <= estimatedModuleSize + 2; moduleSize++) {
+    int contentDimension = estimateContentDimension(image, width, height, comps, moduleSize);
+    for (int version = 1; version <= 40; version++) {
+      int dimension = 17 + 4 * version;
+      if (contentDimension > 0 && std::abs(dimension - contentDimension) > 3) {
+        continue;
+      }
+      int qrSize = dimension * moduleSize;
+      if (qrSize > width || qrSize > height) {
+        continue;
+      }
+      if (width - qrSize > moduleSize * 24 || height - qrSize > moduleSize * 24) {
+        continue;
+      }
 
-    int maxLeft = width - qrSize;
-    int maxTop = height - qrSize;
-    for (int top = 0; top <= maxTop; top++) {
-      for (int left = 0; left <= maxLeft; left++) {
-        float score = scoreVersionOneGrid(image, width, height, comps, left, top, moduleSize);
-        if (score > best.score || (std::abs(score - best.score) < 0.0001f && moduleSize > best.moduleSize)) {
-          best.moduleSize = moduleSize;
-          best.left = left;
-          best.top = top;
-          best.score = score;
+      int step = std::max(1, moduleSize / 3);
+      QRGrid coarse = {0, 0, 0, 0, 0, 0.0f};
+      for (int top = 0; top <= height - qrSize; top += step) {
+        for (int left = 0; left <= width - qrSize; left += step) {
+          float score = scoreQRGrid(image, width, height, comps, version, left, top, moduleSize);
+          if (score > coarse.score) {
+            coarse.version = version;
+            coarse.dimension = dimension;
+            coarse.moduleSize = moduleSize;
+            coarse.left = left;
+            coarse.top = top;
+            coarse.score = score;
+          }
         }
       }
+      refineQRGrid(image, width, height, comps, version, moduleSize, coarse.left, coarse.top, step, best);
     }
   }
   return best;
 }
 
-void repairVersionOneFixedPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
-  int estimatedModuleSize = estimateModuleSize(image, width, height, comps);
-  if (estimatedModuleSize < 3 || std::min(width, height) > estimatedModuleSize * 35) {
-    return;
+bool repairQRFixedPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
+  if (std::min(width, height) < 600 || std::min(width, height) > 1200) {
+    return false;
   }
 
-  VersionOneGrid grid = findBestVersionOneGrid(image, width, height, comps);
+  QRGrid grid = findBestQRGrid(image, width, height, comps);
   if (grid.score < 0.55f) {
-    return;
+    return false;
+  }
+  if (grid.version != 1) {
+    return false;
   }
 
   drawFinderPattern(image, width, height, comps,
       grid.left, grid.top, grid.moduleSize);
   drawFinderPattern(image, width, height, comps,
-      grid.left + 14 * grid.moduleSize, grid.top, grid.moduleSize);
+      grid.left + (grid.dimension - 7) * grid.moduleSize, grid.top, grid.moduleSize);
   drawFinderPattern(image, width, height, comps,
-      grid.left, grid.top + 14 * grid.moduleSize, grid.moduleSize);
+      grid.left, grid.top + (grid.dimension - 7) * grid.moduleSize, grid.moduleSize);
 
-  for (int i = 8; i <= 12; i++) {
+  for (int i = 8; i <= grid.dimension - 9; i++) {
     unsigned char value = (i & 1) == 0 ? 0 : 255;
     drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize, i, 6, value);
     drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize, 6, i, value);
+  }
+
+  drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize, 8, grid.dimension - 8, 0);
+
+  if (grid.version > 1) {
+    zxing::qrcode::Version *qrVersion = zxing::qrcode::Version::getVersionForNumber(grid.version);
+    std::vector<int> &centers = qrVersion->getAlignmentPatternCenters();
+    for (size_t y = 0; y < centers.size(); y++) {
+      for (size_t x = 0; x < centers.size(); x++) {
+        bool nearTopLeft = x == 0 && y == 0;
+        bool nearTopRight = x == centers.size() - 1 && y == 0;
+        bool nearBottomLeft = x == 0 && y == centers.size() - 1;
+        if (nearTopLeft || nearTopRight || nearBottomLeft) {
+          continue;
+        }
+        int centerX = centers[x];
+        int centerY = centers[y];
+        for (int dy = -2; dy <= 2; dy++) {
+          for (int dx = -2; dx <= 2; dx++) {
+            bool isBlack = false;
+            alignmentModule(dx, dy, isBlack);
+            drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize,
+                centerX + dx, centerY + dy, isBlack ? 0 : 255);
+          }
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+float scoreFinderCandidate(zxing::ArrayRef<char> const& image, int width, int height, int comps,
+                           int left, int top, int moduleSize) {
+  if (left < 0 || top < 0 || left + 7 * moduleSize > width || top + 7 * moduleSize > height) {
+    return 0.0f;
+  }
+
+  int matches = 0;
+  int total = 0;
+  for (int moduleY = 0; moduleY < 7; moduleY++) {
+    for (int moduleX = 0; moduleX < 7; moduleX++) {
+      bool expectedBlack = false;
+      finderModule(moduleX, moduleY, expectedBlack);
+      int sampleX = left + moduleX * moduleSize + moduleSize / 2;
+      int sampleY = top + moduleY * moduleSize + moduleSize / 2;
+      bool actualBlack = luminanceAt(image, width, comps, sampleX, sampleY) < 80;
+      if (actualBlack == expectedBlack) {
+        matches++;
+      }
+      total++;
+    }
+  }
+  return (float)matches / (float)total;
+}
+
+void tryRepairFinderCandidate(zxing::ArrayRef<char>& image, int width, int height, int comps,
+                              int left, int top, int moduleSize) {
+  if (scoreFinderCandidate(image, width, height, comps, left, top, moduleSize) > 0.62f) {
+    drawFinderPattern(image, width, height, comps, left, top, moduleSize);
   }
 }
 
@@ -305,7 +479,6 @@ bool isLeftDamagedFinder(zxing::ArrayRef<char> const& image, int width, int heig
     return false;
   }
 
-  // A finder with the left black bar missing still has top, right, bottom and center black areas.
   return blackFraction(image, width, height, comps,
              component.left, component.top, 6 * moduleSize, moduleSize) > 0.65f &&
          blackFraction(image, width, height, comps,
@@ -316,9 +489,41 @@ bool isLeftDamagedFinder(zxing::ArrayRef<char> const& image, int width, int heig
              component.left + moduleSize, component.top + 2 * moduleSize, 3 * moduleSize, 3 * moduleSize) > 0.65f;
 }
 
-void repairLeftDamagedFinderPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
+bool isRightDamagedFinder(zxing::ArrayRef<char> const& image, int width, int height, int comps,
+                          Component const& component, int& moduleSize) {
+  int w = component.right - component.left + 1;
+  int h = component.bottom - component.top + 1;
+  if (w < 30 || h < 40 || h > height / 2) {
+    return false;
+  }
+
+  moduleSize = h / 7;
+  if (moduleSize < 3) {
+    return false;
+  }
+
+  int tolerance = std::max(3, moduleSize / 2);
+  if (std::abs(h - 7 * moduleSize) > tolerance || w < 4 * moduleSize || w > 7 * moduleSize) {
+    return false;
+  }
+  if (component.left + 7 * moduleSize > width || component.top + 7 * moduleSize > height) {
+    return false;
+  }
+
+  return blackFraction(image, width, height, comps,
+             component.left, component.top, std::min(w, 6 * moduleSize), moduleSize) > 0.65f &&
+         blackFraction(image, width, height, comps,
+             component.left, component.top, moduleSize, 7 * moduleSize) > 0.65f &&
+         blackFraction(image, width, height, comps,
+             component.left, component.top + 6 * moduleSize, std::min(w, 6 * moduleSize), moduleSize) > 0.65f &&
+         blackFraction(image, width, height, comps,
+             component.left + 2 * moduleSize, component.top + 2 * moduleSize, 3 * moduleSize, 3 * moduleSize) > 0.65f;
+}
+
+void repairDamagedFinderPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
   std::vector<unsigned char> visited(width * height, 0);
   std::vector<int> stack;
+  bool repairedSpecificFinder = false;
 
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
@@ -359,10 +564,75 @@ void repairLeftDamagedFinderPatterns(zxing::ArrayRef<char>& image, int width, in
         }
       }
 
-      int moduleSize = 0;
-      if (isLeftDamagedFinder(image, width, height, comps, component, moduleSize)) {
+      int componentWidth = component.right - component.left + 1;
+      int componentHeight = component.bottom - component.top + 1;
+      int minFinderComponentSize = std::max(30, std::min(width, height) / 14);
+      if (componentWidth < minFinderComponentSize || componentHeight < minFinderComponentSize ||
+          componentWidth > width / 2 || componentHeight > height / 2) {
+        continue;
+      }
+      float aspect = (float)componentWidth / (float)componentHeight;
+      if (aspect < 0.70f || aspect > 1.45f) {
+        continue;
+      }
+
+      int leftDamagedModuleSize = 0;
+      if (isLeftDamagedFinder(image, width, height, comps, component, leftDamagedModuleSize)) {
         drawFinderPattern(image, width, height, comps,
-            component.left - moduleSize, component.top, moduleSize);
+            component.left - leftDamagedModuleSize, component.top, leftDamagedModuleSize);
+        repairedSpecificFinder = true;
+        continue;
+      }
+      int rightDamagedModuleSize = 0;
+      if (isRightDamagedFinder(image, width, height, comps, component, rightDamagedModuleSize)) {
+        float rightScore = scoreFinderCandidate(image, width, height, comps,
+            component.left, component.top, rightDamagedModuleSize);
+        float leftScore = scoreFinderCandidate(image, width, height, comps,
+            component.left - rightDamagedModuleSize, component.top, rightDamagedModuleSize);
+        if (rightScore >= leftScore) {
+          drawFinderPattern(image, width, height, comps,
+              component.left, component.top, rightDamagedModuleSize);
+          repairedSpecificFinder = true;
+          continue;
+        }
+      }
+      if (repairedSpecificFinder) {
+        continue;
+      }
+      if (std::min(width, height) < 600) {
+        continue;
+      }
+
+      int estimatedModuleSize = (std::max(componentWidth, componentHeight) + 3) / 7;
+      for (int moduleSize = std::max(3, estimatedModuleSize - 2);
+           moduleSize <= estimatedModuleSize + 2; moduleSize++) {
+        int finderSize = 7 * moduleSize;
+        if (finderSize < componentWidth || finderSize < componentHeight) {
+          continue;
+        }
+        int missingWidth = finderSize - componentWidth;
+        int missingHeight = finderSize - componentHeight;
+        if (missingWidth > 2 * moduleSize || missingHeight > 2 * moduleSize) {
+          continue;
+        }
+
+        int candidateLefts[3] = {
+          component.left,
+          component.right - finderSize + 1,
+          component.left - missingWidth / 2
+        };
+        int candidateTops[3] = {
+          component.top,
+          component.bottom - finderSize + 1,
+          component.top - missingHeight / 2
+        };
+
+        for (int y = 0; y < 3; y++) {
+          for (int x = 0; x < 3; x++) {
+            tryRepairFinderCandidate(image, width, height, comps,
+                candidateLefts[x], candidateTops[y], moduleSize);
+          }
+        }
       }
     }
   }
@@ -390,6 +660,10 @@ ImageReaderSource::ImageReaderSource(ArrayRef<char> image_, int width, int heigh
     : Super(width, height), image(image_), comps(comps_) {}
 
 Ref<LuminanceSource> ImageReaderSource::create(string const& filename) {
+  return create(filename, false);
+}
+
+Ref<LuminanceSource> ImageReaderSource::create(string const& filename, bool repairFixedPatterns) {
   string extension = filename.substr(filename.find_last_of(".") + 1);
   std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
   int width, height;
@@ -424,8 +698,11 @@ Ref<LuminanceSource> ImageReaderSource::create(string const& filename) {
     throw zxing::IllegalArgumentException(msg.str().c_str());
   }
 
-  repairVersionOneFixedPatterns(image, width, height, comps);
-  repairLeftDamagedFinderPatterns(image, width, height, comps);
+  if (repairFixedPatterns) {
+    if (!repairQRFixedPatterns(image, width, height, comps)) {
+      repairDamagedFinderPatterns(image, width, height, comps);
+    }
+  }
 
   return Ref<LuminanceSource>(new ImageReaderSource(image, width, height, comps));
 }
