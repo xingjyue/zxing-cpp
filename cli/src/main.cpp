@@ -88,8 +88,31 @@ int read_image(Ref<LuminanceSource> source, bool hybrid, string expected, bool h
     }
     res = 0;
   } catch (const ReaderException& e) {
-    cell_result = "zxing::ReaderException: " + string(e.what());
-    res = -2;
+    if (hints_try_harder) {
+      try {
+        Ref<Binarizer> binarizer;
+        if (hybrid) {
+          binarizer = new HybridBinarizer(source);
+        } else {
+          binarizer = new GlobalHistogramBinarizer(source);
+        }
+        DecodeHints hints(DecodeHints::DEFAULT_HINT);
+        hints.setTryHarder(false);
+        Ref<BinaryBitmap> binary(new BinaryBitmap(binarizer));
+        if (search_multi) {
+          results = decode_multi(binary, hints);
+        } else {
+          results = decode(binary, hints);
+        }
+        res = 0;
+      } catch (const ReaderException& retryException) {
+        cell_result = "zxing::ReaderException: " + string(retryException.what());
+        res = -2;
+      }
+    } else {
+      cell_result = "zxing::ReaderException: " + string(e.what());
+      res = -2;
+    }
   } catch (const zxing::IllegalArgumentException& e) {
     cell_result = "zxing::IllegalArgumentException: " + string(e.what());
     res = -3;

@@ -259,6 +259,11 @@ VersionOneGrid findBestVersionOneGrid(zxing::ArrayRef<char> const& image, int wi
 }
 
 void repairVersionOneFixedPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
+  int estimatedModuleSize = estimateModuleSize(image, width, height, comps);
+  if (estimatedModuleSize < 3 || std::min(width, height) > estimatedModuleSize * 35) {
+    return;
+  }
+
   VersionOneGrid grid = findBestVersionOneGrid(image, width, height, comps);
   if (grid.score < 0.55f) {
     return;
@@ -282,11 +287,11 @@ bool isLeftDamagedFinder(zxing::ArrayRef<char> const& image, int width, int heig
                          Component const& component, int& moduleSize) {
   int w = component.right - component.left + 1;
   int h = component.bottom - component.top + 1;
-  if (w < 30 || h < std::min(width, height) / 5 || h > height / 2) {
+  if (w < 30 || h < 40 || h > height / 2) {
     return false;
   }
 
-  moduleSize = (h + 3) / 7;
+  moduleSize = std::min(h / 7, w / 6);
   if (moduleSize < 3) {
     return false;
   }
