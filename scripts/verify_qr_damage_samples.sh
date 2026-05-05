@@ -21,6 +21,7 @@ samples=(
   "123_destroy6.png:123"
   "123_destroy7.png:123"
   "123_destroy8.png:123"
+  "333.png:333"
   "888.png:888"
   "888_destroy1.png:888"
   "888_destroy2.png:888"

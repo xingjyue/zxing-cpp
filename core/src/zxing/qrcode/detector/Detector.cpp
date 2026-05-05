@@ -117,7 +117,17 @@ Ref<DetectorResult> Detector::processFinderPatternInfo(Ref<FinderPatternInfo> in
   }
 
   Ref<PerspectiveTransform> transform = createTransform(topLeft, topRight, bottomLeft, alignmentPattern, dimension);
-  Ref<BitMatrix> bits(sampleGrid(image_, dimension, transform));
+  Ref<BitMatrix> bits;
+  try {
+    bits = sampleGrid(image_, dimension, transform);
+  } catch (zxing::ReaderException const& re) {
+    if (alignmentPattern == 0) {
+      throw re;
+    }
+    alignmentPattern.reset(0);
+    transform = createTransform(topLeft, topRight, bottomLeft, alignmentPattern, dimension);
+    bits = sampleGrid(image_, dimension, transform);
+  }
   ArrayRef< Ref<ResultPoint> > points(new Array< Ref<ResultPoint> >(alignmentPattern == 0 ? 3 : 4));
   points[0].reset(bottomLeft);
   points[1].reset(topLeft);

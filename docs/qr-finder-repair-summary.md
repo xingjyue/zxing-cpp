@@ -26,6 +26,8 @@ The relevant recovery strategies from current QR recovery tools and papers are:
 
 This project now follows that structure: a small image preprocessor repairs fixed QR structures before ZXing's existing binarizer, detector, grid sampler, and decoder run.
 
+The current policy is conservative: decode the original image first, without modifying pixels. Repair is only enabled after the normal path fails.
+
 ## Root Cause
 
 The new failures were not caused by payload corruption. They happened during QR localization.
@@ -78,6 +80,7 @@ There is also a CLI-level decode fallback:
 
 - If `--try-harder` is requested and a read fails, the CLI retries the same image once with normal finder detection.
 - This preserves `tryHarder` behavior for hard images, but prevents clean high-version QR codes such as `888.png` from failing only because the relaxed search picked the wrong pattern triplet.
+- For high-version clean QR codes that still fail because the old detector chooses unstable alignment geometry, the repair path can normalize the QR into a module image and retry decoding.
 
 The Version 1 grid repair handles severe low-version generated samples such as `123_destroy*.png`. The connected-component finder repair handles localized finder damage independent of QR version, including `123_new.png`, `888_destroy1.png`, and `888_destroy2.png`.
 
@@ -87,7 +90,7 @@ For each PNG/JPEG loaded by the CLI:
 
 1. Decode the image into RGBA/gray pixels.
 2. Convert pixels to luminance using the existing ZXing weighting.
-3. Try normal decoding first. If it succeeds, stop.
+3. Try normal decoding first. If it succeeds, stop. This is the highest-priority path.
 4. If decoding fails, reload the image with structural repair enabled.
 5. Estimate module size:
    - scan horizontal black runs;
@@ -177,4 +180,5 @@ scripts/verify_qr_damage_samples.sh
 - The grid-level fixed-pattern restoration currently targets Version 1 QR codes (`21x21` modules), which matches the `123` damaged samples.
 - Higher-version codes are protected from the Version 1 repair by image-size guards. Their localized finder damage is handled by the connected-component finder repair instead, so the approach is not tied to Version 1.
 - The approach is intended for axis-aligned generated QR images. Strong perspective distortion, curved surfaces, or warped modules require a dewarping stage before this repair.
+- Finder repair is best-effort. If finder destruction is too large or ambiguous, the repair step may decline or fail rather than risk breaking normally decodable images.
 - If payload damage exceeds QR error-correction capacity, fixed-pattern repair alone will not be enough. At that point the decoder would need bit-level erasure handling or manual/brute-force recovery.

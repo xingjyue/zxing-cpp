@@ -267,6 +267,33 @@ int estimateContentDimension(zxing::ArrayRef<char> const& image, int width, int 
   return (contentSpan + moduleSize / 2) / moduleSize;
 }
 
+bool findContentBounds(zxing::ArrayRef<char> const& image, int width, int height, int comps,
+                       int& left, int& top, int& size) {
+  int minX = width;
+  int minY = height;
+  int maxX = -1;
+  int maxY = -1;
+  int border = 5;
+  for (int y = border; y < height - border; y++) {
+    for (int x = border; x < width - border; x++) {
+      if (luminanceAt(image, width, comps, x, y) < 80) {
+        minX = std::min(minX, x);
+        minY = std::min(minY, y);
+        maxX = std::max(maxX, x);
+        maxY = std::max(maxY, y);
+      }
+    }
+  }
+  if (maxX < minX || maxY < minY) {
+    return false;
+  }
+
+  left = minX;
+  top = minY;
+  size = std::max(maxX - minX + 1, maxY - minY + 1);
+  return true;
+}
+
 float scoreQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
                   int version, int gridLeft, int gridTop, int moduleSize) {
   int matches = 0;
@@ -293,6 +320,103 @@ float scoreQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int
     }
   }
   return total == 0 ? 0.0f : (float)matches / (float)total;
+}
+
+float scoreFloatQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
+                       int version, int gridLeft, int gridTop, int gridSize) {
+  int dimension = 17 + 4 * version;
+  float moduleSize = (float)gridSize / (float)dimension;
+  if (moduleSize < 2.0f) {
+    return 0.0f;
+  }
+
+  int matches = 0;
+  int total = 0;
+  for (int moduleY = 0; moduleY < dimension; moduleY++) {
+    for (int moduleX = 0; moduleX < dimension; moduleX++) {
+      bool expectedBlack = false;
+      if (!fixedModuleForVersion(version, moduleX, moduleY, expectedBlack)) {
+        continue;
+      }
+
+      int sampleX = gridLeft + (int)((moduleX + 0.5f) * moduleSize + 0.5f);
+      int sampleY = gridTop + (int)((moduleY + 0.5f) * moduleSize + 0.5f);
+      if (sampleX < 0 || sampleY < 0 || sampleX >= width || sampleY >= height) {
+        continue;
+      }
+
+      bool actualBlack = luminanceAt(image, width, comps, sampleX, sampleY) < 80;
+      if (actualBlack == expectedBlack) {
+        matches++;
+      }
+      total++;
+    }
+  }
+  return total == 0 ? 0.0f : (float)matches / (float)total;
+}
+
+bool normalizeQRToModuleImage(zxing::ArrayRef<char>& image, int& width, int& height, int& comps) {
+  int gridLeft = 0;
+  int gridTop = 0;
+  int gridSize = 0;
+  if (!findContentBounds(image, width, height, comps, gridLeft, gridTop, gridSize)) {
+    return false;
+  }
+
+  int bestVersion = 0;
+  float bestScore = 0.0f;
+  for (int version = 1; version <= 40; version++) {
+    float score = scoreFloatQRGrid(image, width, height, comps, version, gridLeft, gridTop, gridSize);
+    if (score > bestScore) {
+      bestScore = score;
+      bestVersion = version;
+    }
+  }
+  if (bestVersion == 0 || bestScore < 0.72f) {
+    return false;
+  }
+
+  int dimension = 17 + 4 * bestVersion;
+  float moduleSize = (float)gridSize / (float)dimension;
+  const int scale = 8;
+  const int quietZone = 4;
+  int normalizedWidth = (dimension + quietZone * 2) * scale;
+  int normalizedHeight = normalizedWidth;
+  zxing::ArrayRef<char> normalized(4 * normalizedWidth * normalizedHeight);
+  for (int y = 0; y < normalizedHeight; y++) {
+    for (int x = 0; x < normalizedWidth; x++) {
+      setPixel(normalized, normalizedWidth, 4, x, y, 255);
+    }
+  }
+
+  for (int moduleY = 0; moduleY < dimension; moduleY++) {
+    for (int moduleX = 0; moduleX < dimension; moduleX++) {
+      bool fixedBlack = false;
+      bool hasFixedValue = fixedModuleForVersion(bestVersion, moduleX, moduleY, fixedBlack);
+      int sampleX = gridLeft + (int)((moduleX + 0.5f) * moduleSize + 0.5f);
+      int sampleY = gridTop + (int)((moduleY + 0.5f) * moduleSize + 0.5f);
+      bool isBlack = hasFixedValue ? fixedBlack :
+          (sampleX >= 0 && sampleY >= 0 && sampleX < width && sampleY < height &&
+           luminanceAt(image, width, comps, sampleX, sampleY) < 80);
+      if (!isBlack) {
+        continue;
+      }
+
+      int outLeft = (moduleX + quietZone) * scale;
+      int outTop = (moduleY + quietZone) * scale;
+      for (int y = outTop; y < outTop + scale; y++) {
+        for (int x = outLeft; x < outLeft + scale; x++) {
+          setPixel(normalized, normalizedWidth, 4, x, y, 0);
+        }
+      }
+    }
+  }
+
+  image = normalized;
+  width = normalizedWidth;
+  height = normalizedHeight;
+  comps = 4;
+  return true;
 }
 
 void refineQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
@@ -450,11 +574,13 @@ float scoreFinderCandidate(zxing::ArrayRef<char> const& image, int width, int he
   return (float)matches / (float)total;
 }
 
-void tryRepairFinderCandidate(zxing::ArrayRef<char>& image, int width, int height, int comps,
+bool tryRepairFinderCandidate(zxing::ArrayRef<char>& image, int width, int height, int comps,
                               int left, int top, int moduleSize) {
   if (scoreFinderCandidate(image, width, height, comps, left, top, moduleSize) > 0.62f) {
     drawFinderPattern(image, width, height, comps, left, top, moduleSize);
+    return true;
   }
+  return false;
 }
 
 bool isLeftDamagedFinder(zxing::ArrayRef<char> const& image, int width, int height, int comps,
@@ -465,7 +591,7 @@ bool isLeftDamagedFinder(zxing::ArrayRef<char> const& image, int width, int heig
     return false;
   }
 
-  moduleSize = std::min(h / 7, w / 6);
+  moduleSize = h / 7;
   if (moduleSize < 3) {
     return false;
   }
@@ -520,10 +646,11 @@ bool isRightDamagedFinder(zxing::ArrayRef<char> const& image, int width, int hei
              component.left + 2 * moduleSize, component.top + 2 * moduleSize, 3 * moduleSize, 3 * moduleSize) > 0.65f;
 }
 
-void repairDamagedFinderPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
+bool repairDamagedFinderPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
   std::vector<unsigned char> visited(width * height, 0);
   std::vector<int> stack;
   bool repairedSpecificFinder = false;
+  bool repairedAnyFinder = false;
 
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
@@ -581,6 +708,7 @@ void repairDamagedFinderPatterns(zxing::ArrayRef<char>& image, int width, int he
         drawFinderPattern(image, width, height, comps,
             component.left - leftDamagedModuleSize, component.top, leftDamagedModuleSize);
         repairedSpecificFinder = true;
+        repairedAnyFinder = true;
         continue;
       }
       int rightDamagedModuleSize = 0;
@@ -593,6 +721,7 @@ void repairDamagedFinderPatterns(zxing::ArrayRef<char>& image, int width, int he
           drawFinderPattern(image, width, height, comps,
               component.left, component.top, rightDamagedModuleSize);
           repairedSpecificFinder = true;
+          repairedAnyFinder = true;
           continue;
         }
       }
@@ -629,13 +758,16 @@ void repairDamagedFinderPatterns(zxing::ArrayRef<char>& image, int width, int he
 
         for (int y = 0; y < 3; y++) {
           for (int x = 0; x < 3; x++) {
-            tryRepairFinderCandidate(image, width, height, comps,
-                candidateLefts[x], candidateTops[y], moduleSize);
+            if (tryRepairFinderCandidate(image, width, height, comps,
+                candidateLefts[x], candidateTops[y], moduleSize)) {
+              repairedAnyFinder = true;
+            }
           }
         }
       }
     }
   }
+  return repairedAnyFinder;
 }
 
 }
@@ -699,8 +831,16 @@ Ref<LuminanceSource> ImageReaderSource::create(string const& filename, bool repa
   }
 
   if (repairFixedPatterns) {
-    if (!repairQRFixedPatterns(image, width, height, comps)) {
+    if (std::min(width, height) > 1200) {
       repairDamagedFinderPatterns(image, width, height, comps);
+      if (!normalizeQRToModuleImage(image, width, height, comps)) {
+        repairQRFixedPatterns(image, width, height, comps);
+      }
+    } else {
+      if (!normalizeQRToModuleImage(image, width, height, comps) &&
+          !repairQRFixedPatterns(image, width, height, comps)) {
+        repairDamagedFinderPatterns(image, width, height, comps);
+      }
     }
   }
 
