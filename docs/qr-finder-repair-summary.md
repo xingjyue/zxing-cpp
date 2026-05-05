@@ -1,147 +1,112 @@
 # QR Finder Pattern Repair Summary
 
-## Background
+## Goal
 
-The local sample set contains one clean QR code and several deliberately damaged QR codes under `qr_fig/`:
+Two requirements drive the design:
 
-- `123.png`: clean baseline, decodes as `123`.
-- `123_new.png`: gray selection/crop artifacts damage the left edge of two finder patterns.
-- `123_destroy1.png` through `123_destroy4.png`: first class, one finder edge is removed or badly weakened.
-- `123_destroy5.png` and `123_destroy6.png`: second class, one or more finder patterns are almost completely removed.
-- `123_destroy7.png` and `123_destroy8.png`: third class, multiple finder patterns are partially damaged at the same time.
-- `888.png`: clean high-version QR code, decodes as `888`.
-- `888_destroy1.png`: high-version QR code with damaged finder patterns, decodes as `888` after repair.
-- `888_destroy2.png`: high-version QR code with right-edge finder damage, decodes as `888` after repair.
+1. **Always decode normal, undamaged QR codes** of any version. The decoder must not regress because of repair logic.
+2. **Best-effort decode** of QR codes whose finder patterns or other fixed structures are partially or fully destroyed.
 
-Before the final fix, `123.png` and `123_new.png` decoded successfully, but all eight `123_destroy*.png` images failed with `decoding failed` / `zxing::ReaderException: No code detected`. Later, `888.png` exposed another issue: the old ZXing detector could decode it in normal mode, but `--try-harder` could over-relax finder detection and choose the wrong finder triplet. The `888_destroy*.png` samples also showed that the earlier damaged-finder repair was too narrow because it assumed low-version QR codes and left-edge damage only.
+## Sample Set
 
-## Algorithm Research
+All samples live under `qr_fig/`:
 
-The relevant recovery strategies from current QR recovery tools and papers are:
+- `123.png`: clean baseline, Version 1, decodes as `123`.
+- `123_new.png`: Version 1 with gray crop artifacts overlapping the left edges of two finder patterns.
+- `123_destroy1.png` to `123_destroy8.png`: Version 1 with progressively heavier finder damage.
+- `333.png`: clean Version 15 (`77x77` modules), decodes as `333`.
+- `333_destroy1.png`, `333_destroy2.png`: Version 15 with two finder patterns mostly missing.
+- `888.png`: clean Version 10 (`57x57` modules), decodes as `888`.
+- `888_destroy1.png` to `888_destroy3.png`: Version 10 with one or more damaged finders.
 
-1. **Recover fixed QR structures first.** Finder patterns, separators, timing patterns, format information, and version information are deterministic. If these structures are damaged, decoders often fail before Reed-Solomon error correction can help.
-2. **Use remaining geometry to estimate the grid.** Damaged-finder algorithms often localize partial finder components, then infer the missing finder or missing corner from the expected QR geometry.
-3. **Leave data damage to QR error correction.** Once the grid and fixed patterns are reliable, ordinary QR decoding can handle moderate data-module loss through Reed-Solomon correction.
-4. **For severe curvature or perspective distortion, dewarp first.** That is a separate problem. The new samples are axis-aligned generated QR images, so fixed-pattern/grid repair is the right level of intervention.
+## Algorithmic Background
 
-This project now follows that structure: a small image preprocessor repairs fixed QR structures before ZXing's existing binarizer, detector, grid sampler, and decoder run.
+The literature on damaged QR recovery (e.g., the Dynamsoft auto-restore writeup, the MDPI paper on partial finder damage, MMA 2015 QR code recovery, the QRazyBox toolkit) consistently uses three building blocks:
 
-The current policy is conservative: decode the original image first, without modifying pixels. Repair is only enabled after the normal path fails.
+1. **Recover deterministic structures first.** Finder patterns, separators, timing patterns, dark module, and alignment patterns have known positions and colors per version.
+2. **Use surviving geometry as anchors.** When some finders are missing, the remaining geometry plus the QR module grid lets the decoder estimate the missing pieces.
+3. **Trust Reed-Solomon for residual data damage.** Once the grid is recovered, ZXing's existing decoder handles a fair amount of payload corruption.
 
-## Root Cause
+Curved surfaces or strong perspective distortion still require a dewarping pre-stage; this repository targets axis-aligned generated QR images.
 
-The new failures were not caused by payload corruption. They happened during QR localization.
+## Design
 
-ZXing's QR detector searches for the three large finder patterns using the `1:1:3:1:1` black/white run-length shape. When a finder pattern has a missing side, missing corner, or is entirely removed, the detector cannot confidently identify the three anchors. The pipeline then stops with `No code detected`, so Reed-Solomon error correction never gets a chance to recover the message.
+The CLI flow now has two strict layers:
 
-For these generated images, the module grid is still regular:
+### Layer 1: Original Image Decode
 
-- The QR version is Version 1 (`21x21` modules).
-- The module size is consistent within each image.
-- Most non-finder data modules remain aligned.
-- The intended message is still recoverable once the fixed patterns are restored.
+`ImageReaderSource::create(filename)` loads the image **without modification**. The CLI runs ZXing's normal pipeline on it. Any clean QR code, regardless of version, is expected to take this path.
 
-For the `888` samples, the root cause differs slightly:
+### Layer 2: Repair-Then-Retry
 
-- `888.png` is a valid high-version QR code. It can decode without `tryHarder`, but the relaxed `tryHarder` finder-pattern search can select an invalid high-version geometry.
-- `888_destroy1.png` has top-left and bottom-left finder damage in a high-version QR grid.
-- `888_destroy2.png` has right-edge damage on a high-version finder.
-- The remaining geometry is still aligned, but the damaged finders prevent reliable localization.
+Only if Layer 1 fails does the CLI reload the image with `ImageReaderSource::create(filename, /*repairFixedPatterns=*/true)`. This pipeline tries three repair strategies in order; each one falls back to the next if it cannot satisfy its safety threshold:
 
-## Implemented Fix
+1. **Version-aware grid normalization (`normalizeQRToModuleImage`)**
+   - Estimate the dominant module size from a black run-length histogram.
+   - Find the bounding box of the QR content.
+   - For each QR version `v` in `1..40` whose implied module size is within `±max(2, estimatedModuleSize/2)` of the dominant run length:
+     - Pre-compute the deterministic fixed modules of version `v`: three finder patterns, the horizontal and vertical timing patterns, the dark module, and all internal alignment patterns.
+     - Search a small window around the bounding box top-left for a `(gridLeft, gridTop)` whose fixed-module score is highest.
+   - Pick the best `(version, gridLeft, gridTop, moduleSize)` overall. If the best score is `>= 0.72`, render a normalized standard QR image:
+     - Each module is `8x8` pixels with a quiet zone of 4 modules.
+     - Fixed modules are forced to their canonical color.
+     - Data modules are sampled from the original image at the inferred grid.
+   - Hand this clean module image to ZXing.
+2. **Version-1 fixed-pattern restoration (`repairQRFixedPatterns`)**
+   - Specialized fallback for `21x21` codes that the normalization could not lock in.
+   - Redraws the three finder patterns and the timing patterns at the best Version 1 grid match.
+3. **Version-independent finder restoration (`repairDamagedFinderPatterns`)**
+   - Connected-component scan for finder-shaped survivors.
+   - Recognizes left-edge or right-edge damage and redraws the affected finder.
+   - Tries multiple alignment hypotheses around each candidate component, but only writes a finder when the candidate score passes the structural check, so it does not corrupt valid data modules.
 
-The fix is implemented in `cli/src/ImageReaderSource.cpp` during image loading.
+The grid normalization is now safe enough to run unconditionally inside Layer 2 because:
 
-The repair is no longer run blindly. The CLI first attempts to decode the original image. Only if that fails does it reload the image with structural repair enabled. This keeps clean high-version codes from being modified unnecessarily.
+- The version filter based on `estimatedModuleSize` keeps the search bounded.
+- Fixed modules are pre-computed per version, so the inner loop is small even for Version 40.
+- Layer 2 only runs after Layer 1 has already failed; it never touches healthy decoding.
 
-There are two repair stages:
+### Detector Robustness Tweak
 
-1. **Version 1 fixed-pattern restoration**
-   - Estimate module size from the most common black run length in rows and columns.
-   - Search for the best `21x21` Version 1 grid position.
-   - Score each candidate grid against deterministic Version 1 fixed modules:
-     - top-left, top-right, and bottom-left finder patterns;
-     - horizontal and vertical timing patterns.
-   - If the best score is high enough, redraw:
-     - all three `7x7` finder patterns;
-     - the two timing-pattern spans between finders.
+`Detector::processFinderPatternInfo` now retries grid sampling with a 3-finder transform if alignment-pattern based sampling lands a coordinate outside the image. This used to cause `Transformed point out of bounds` failures on legitimate high-version codes such as `333.png`.
 
-2. **Version-independent connected-component finder repair**
-   - This is the repair that generalizes to arbitrary QR versions.
-   - It scans connected black components and filters for finder-sized, near-square components.
-   - It recognizes partially preserved finder structures without assuming a specific QR dimension.
-   - It supports at least left-edge and right-edge finder damage:
-     - left damage: infer the missing module column before the observed component;
-     - right damage: infer the missing module columns after the observed component.
-   - It scores candidate `7x7` finder reconstructions against the standard QR finder layout before drawing.
-   - Candidate size filtering avoids confusing small alignment patterns with large finder patterns.
+## Detailed Pipeline
 
-There is also a CLI-level decode fallback:
-
-- If `--try-harder` is requested and a read fails, the CLI retries the same image once with normal finder detection.
-- This preserves `tryHarder` behavior for hard images, but prevents clean high-version QR codes such as `888.png` from failing only because the relaxed search picked the wrong pattern triplet.
-- For high-version clean QR codes that still fail because the old detector chooses unstable alignment geometry, the repair path can normalize the QR into a module image and retry decoding.
-
-The Version 1 grid repair handles severe low-version generated samples such as `123_destroy*.png`. The connected-component finder repair handles localized finder damage independent of QR version, including `123_new.png`, `888_destroy1.png`, and `888_destroy2.png`.
-
-## Detailed Flow
-
-For each PNG/JPEG loaded by the CLI:
+For each PNG/JPEG handed to the CLI:
 
 1. Decode the image into RGBA/gray pixels.
-2. Convert pixels to luminance using the existing ZXing weighting.
-3. Try normal decoding first. If it succeeds, stop. This is the highest-priority path.
-4. If decoding fails, reload the image with structural repair enabled.
-5. Estimate module size:
-   - scan horizontal black runs;
-   - scan vertical black runs;
-   - build a run-length histogram;
-   - choose the most common plausible run length.
-6. Search candidate Version 1 grids as a low-version fallback:
-   - candidate size is `21 * moduleSize`;
-   - candidate origin ranges over all positions where that square fits in the image;
-   - each candidate samples only fixed modules, not payload modules.
-7. Score candidates:
-   - finder modules must match the standard outer-black / inner-white / center-black pattern;
-   - timing modules must alternate black/white;
-   - data modules are ignored because they are content-dependent.
-8. Repair the best Version 1 candidate if its score passes the threshold:
-   - redraw three finder patterns;
-   - redraw horizontal and vertical timing patterns.
-9. Skip Version 1 grid repair for very small cropped images and very large high-version images. This avoids corrupting valid high-version QR codes such as `888.png`.
-10. If Version 1 grid repair did not apply, run the version-independent connected-component finder repair.
-11. Pass the repaired luminance source to ZXing's normal decoding pipeline.
+2. Convert pixels to luminance using ZXing's standard weighting.
+3. Try the normal ZXing pipeline (binarizer + detector + decoder). If it succeeds, return.
+4. If decoding fails, reload the image with `repairFixedPatterns=true`.
+5. Run version-aware grid normalization:
+   - Estimate dominant module size from row/column black run-length histogram.
+   - Compute bounding box of all black content.
+   - For each QR version whose implied module size matches the histogram, sweep a small window around the bounding box top-left and score against pre-computed fixed modules.
+   - If the best score >= 0.72, rebuild a normalized canonical QR image (8 px modules, 4-module quiet zone) and hand it to ZXing.
+6. If grid normalization is not confident enough, try Version 1 fixed-pattern restoration.
+7. If neither applied, run version-independent connected-component finder restoration.
+8. Pass the (possibly repaired) luminance source through ZXing's normal decode path.
+9. If `--try-harder` is requested but the relaxed finder search picks an inconsistent triplet, the CLI falls back to a normal-mode retry.
 
-The repair does not hard-code the payload `123`. It restores structural QR markers and lets the decoder recover the data normally.
+## Verification
 
-## Verification Script
+Regression script: `scripts/verify_qr_damage_samples.sh`. Each entry is `name:expected_payload` and the script requires every sample to decode exactly to its expected text.
 
-A regression script was added at:
+Build:
 
-```text
+```bash
+cd /Users/xingjyue/Desktop/claudecode/project/zxing-cpp/build
+/usr/local/Cellar/cmake/4.3.1/bin/cmake --build . -j4
+```
+
+Run:
+
+```bash
+cd /Users/xingjyue/Desktop/claudecode/project/zxing-cpp
 scripts/verify_qr_damage_samples.sh
 ```
 
-It runs the built CLI against:
-
-- `123.png`
-- `123_new.png`
-- `123_destroy1.png` through `123_destroy8.png`
-- `888.png`
-- `888_destroy1.png`
-- `888_destroy2.png`
-
-and requires every image to decode to its expected payload.
-
-Before the grid repair, the script failed at the first damaged sample:
-
-```text
-123.png: 123
-123_new.png: 123
-123_destroy1.png: expected 123, got decoding failed
-```
-
-After the final fix, the script output was:
+Latest passing output:
 
 ```text
 123.png: 123
@@ -154,31 +119,26 @@ After the final fix, the script output was:
 123_destroy6.png: 123
 123_destroy7.png: 123
 123_destroy8.png: 123
+333.png: 333
 888.png: 888
 888_destroy1.png: 888
 888_destroy2.png: 888
+888_destroy3.png: 888
+333_destroy1.png: 333
+333_destroy2.png: 333
 ```
 
-## Build And Verify
+Normal-decode smoke (no repair invoked, both with and without `--try-harder`):
 
-Build:
-
-```bash
-cd /Users/xingjyue/Desktop/claudecode/project/zxing-cpp/build
-/usr/local/Cellar/cmake/4.3.1/bin/cmake --build . -j4
-```
-
-Run regression verification:
-
-```bash
-cd /Users/xingjyue/Desktop/claudecode/project/zxing-cpp
-scripts/verify_qr_damage_samples.sh
+```text
+123 -> 123
+333 -> 333
+888 -> 888
 ```
 
 ## Limitations
 
-- The grid-level fixed-pattern restoration currently targets Version 1 QR codes (`21x21` modules), which matches the `123` damaged samples.
-- Higher-version codes are protected from the Version 1 repair by image-size guards. Their localized finder damage is handled by the connected-component finder repair instead, so the approach is not tied to Version 1.
-- The approach is intended for axis-aligned generated QR images. Strong perspective distortion, curved surfaces, or warped modules require a dewarping stage before this repair.
-- Finder repair is best-effort. If finder destruction is too large or ambiguous, the repair step may decline or fail rather than risk breaking normally decodable images.
-- If payload damage exceeds QR error-correction capacity, fixed-pattern repair alone will not be enough. At that point the decoder would need bit-level erasure handling or manual/brute-force recovery.
+- All repair logic targets axis-aligned generated QR images. Strong perspective distortion or curved surfaces need a dewarping stage before these steps.
+- The version-aware normalization gives up if the best candidate score is below `0.72`. This is intentional; we prefer to fail loudly rather than emit garbage data.
+- Connected-component finder repair refuses to touch components whose aspect ratio is not finder-like, to avoid mistaking large black blobs for finders.
+- If payload damage exceeds the QR Reed-Solomon capacity, fixed-pattern repair alone is not enough. Bit-level erasure handling and exhaustive mask/version brute-force would be needed in that case.

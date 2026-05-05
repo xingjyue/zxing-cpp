@@ -355,29 +355,129 @@ float scoreFloatQRGrid(zxing::ArrayRef<char> const& image, int width, int height
   return total == 0 ? 0.0f : (float)matches / (float)total;
 }
 
+struct FixedModuleEntry {
+  int x;
+  int y;
+  bool isBlack;
+};
+
+void buildFixedModules(int version, std::vector<FixedModuleEntry>& out) {
+  int dimension = 17 + 4 * version;
+  out.clear();
+  out.reserve(256);
+  for (int moduleY = 0; moduleY < dimension; moduleY++) {
+    for (int moduleX = 0; moduleX < dimension; moduleX++) {
+      bool isBlack = false;
+      if (fixedModuleForVersion(version, moduleX, moduleY, isBlack)) {
+        FixedModuleEntry entry = {moduleX, moduleY, isBlack};
+        out.push_back(entry);
+      }
+    }
+  }
+}
+
+float scoreCachedQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
+                        std::vector<FixedModuleEntry> const& fixedModules,
+                        int gridLeft, int gridTop, float moduleSize) {
+  int matches = 0;
+  int total = 0;
+  for (size_t i = 0; i < fixedModules.size(); i++) {
+    FixedModuleEntry const& entry = fixedModules[i];
+    int sampleX = gridLeft + (int)((entry.x + 0.5f) * moduleSize + 0.5f);
+    int sampleY = gridTop + (int)((entry.y + 0.5f) * moduleSize + 0.5f);
+    if (sampleX < 0 || sampleY < 0 || sampleX >= width || sampleY >= height) {
+      continue;
+    }
+    bool actualBlack = luminanceAt(image, width, comps, sampleX, sampleY) < 80;
+    if (actualBlack == entry.isBlack) {
+      matches++;
+    }
+    total++;
+  }
+  return total == 0 ? 0.0f : (float)matches / (float)total;
+}
+
 bool normalizeQRToModuleImage(zxing::ArrayRef<char>& image, int& width, int& height, int& comps) {
-  int gridLeft = 0;
-  int gridTop = 0;
-  int gridSize = 0;
-  if (!findContentBounds(image, width, height, comps, gridLeft, gridTop, gridSize)) {
+  int bboxLeft = 0;
+  int bboxTop = 0;
+  int bboxSize = 0;
+  if (!findContentBounds(image, width, height, comps, bboxLeft, bboxTop, bboxSize)) {
+    return false;
+  }
+
+  int estimatedModuleSize = estimateModuleSize(image, width, height, comps);
+  if (estimatedModuleSize < 2) {
     return false;
   }
 
   int bestVersion = 0;
+  int bestLeft = bboxLeft;
+  int bestTop = bboxTop;
+  float bestModuleSize = 0.0f;
   float bestScore = 0.0f;
+
+  std::vector<FixedModuleEntry> fixedModules;
   for (int version = 1; version <= 40; version++) {
-    float score = scoreFloatQRGrid(image, width, height, comps, version, gridLeft, gridTop, gridSize);
-    if (score > bestScore) {
-      bestScore = score;
-      bestVersion = version;
+    int dimension = 17 + 4 * version;
+    float baseModuleSize = (float)bboxSize / (float)dimension;
+    if (baseModuleSize < 2.0f) {
+      continue;
+    }
+
+    // Only test versions whose implied module size is close to the dominant black run length.
+    float moduleTolerance = std::max(2.0f, (float)estimatedModuleSize * 0.5f);
+    if (std::abs(baseModuleSize - (float)estimatedModuleSize) > moduleTolerance) {
+      continue;
+    }
+
+    float candidateModuleSizes[3] = {baseModuleSize, baseModuleSize + 0.5f, baseModuleSize - 0.5f};
+    bool builtFixedModules = false;
+    for (int i = 0; i < 3; i++) {
+      float moduleSize = candidateModuleSizes[i];
+      if (moduleSize < 2.0f) {
+        continue;
+      }
+
+      int qrSize = (int)(moduleSize * dimension + 0.5f);
+      if (qrSize > std::min(width, height)) {
+        continue;
+      }
+
+      if (!builtFixedModules) {
+        buildFixedModules(version, fixedModules);
+        builtFixedModules = true;
+      }
+
+      int searchRadius = std::max(2, (int)(3.0f * moduleSize));
+      int step = std::max(1, (int)(moduleSize / 3.0f));
+      int leftStart = std::max(0, bboxLeft - searchRadius);
+      int leftEnd = std::min(width - qrSize, bboxLeft + searchRadius);
+      int topStart = std::max(0, bboxTop - searchRadius);
+      int topEnd = std::min(height - qrSize, bboxTop + searchRadius);
+
+      for (int top = topStart; top <= topEnd; top += step) {
+        for (int left = leftStart; left <= leftEnd; left += step) {
+          float score = scoreCachedQRGrid(image, width, height, comps, fixedModules, left, top, moduleSize);
+          if (score > bestScore) {
+            bestScore = score;
+            bestVersion = version;
+            bestLeft = left;
+            bestTop = top;
+            bestModuleSize = moduleSize;
+          }
+        }
+      }
     }
   }
+
   if (bestVersion == 0 || bestScore < 0.72f) {
     return false;
   }
 
   int dimension = 17 + 4 * bestVersion;
-  float moduleSize = (float)gridSize / (float)dimension;
+  float moduleSize = bestModuleSize;
+  int gridLeft = bestLeft;
+  int gridTop = bestTop;
   const int scale = 8;
   const int quietZone = 4;
   int normalizedWidth = (dimension + quietZone * 2) * scale;
@@ -831,14 +931,15 @@ Ref<LuminanceSource> ImageReaderSource::create(string const& filename, bool repa
   }
 
   if (repairFixedPatterns) {
-    if (std::min(width, height) > 1200) {
-      repairDamagedFinderPatterns(image, width, height, comps);
-      if (!normalizeQRToModuleImage(image, width, height, comps)) {
-        repairQRFixedPatterns(image, width, height, comps);
-      }
-    } else {
-      if (!normalizeQRToModuleImage(image, width, height, comps) &&
-          !repairQRFixedPatterns(image, width, height, comps)) {
+    // Try the version-aware grid normalization first; it is now safe enough to
+    // run unconditionally because it requires a high fixed-pattern score and a
+    // module size consistent with the dominant black run length.
+    if (!normalizeQRToModuleImage(image, width, height, comps)) {
+      // Fall back: rebuild specific finder patterns when the normalization is not
+      // confident enough.
+      if (!repairQRFixedPatterns(image, width, height, comps)) {
+        repairDamagedFinderPatterns(image, width, height, comps);
+      } else {
         repairDamagedFinderPatterns(image, width, height, comps);
       }
     }
