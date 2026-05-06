@@ -28,6 +28,12 @@ samples=(
   "888_destroy3.png:888"
   "333_destroy1.png:333"
   "333_destroy2.png:333"
+  "333v15.png:333"
+  "333v20.png:333"
+  "333v30.png:333"
+  "333v35.png:333"
+  "333v38.png:84244086"
+  "333v40.png:333"
 )
 
 for item in "${samples[@]}"; do

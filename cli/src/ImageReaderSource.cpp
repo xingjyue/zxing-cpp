@@ -197,7 +197,13 @@ bool fixedModuleForVersion(int version, int moduleX, int moduleY, bool& isBlack)
 int estimateModuleSize(zxing::ArrayRef<char> const& image, int width, int height, int comps) {
   int maxLength = std::max(width, height);
   std::vector<int> histogram(maxLength + 1, 0);
-  int minRun = std::max(3, std::min(width, height) / 80);
+  // Use a small floor so that single-module runs of dense (high-version) QR
+  // codes are not filtered out. The previous floor of std::min(w,h)/80 ruled
+  // out runs shorter than ~13 px on 1080-pixel images, while the actual
+  // module width for QR v35-v40 is only ~6 px. As a result the histogram
+  // peak landed on 2- or 3-module clusters and the version filter rejected
+  // the true high versions.
+  int minRun = std::max(2, std::min(width, height) / 400);
   int maxRun = std::max(minRun, std::min(width, height) / 3);
 
   for (int y = 5; y < height - 5; y++) {
@@ -235,9 +241,27 @@ int estimateModuleSize(zxing::ArrayRef<char> const& image, int width, int height
   int bestRun = 0;
   int bestCount = 0;
   for (size_t i = 0; i < histogram.size(); i++) {
-    if (histogram[i] > bestCount) {
+    if ((int)histogram[i] > bestCount) {
       bestRun = (int)i;
-      bestCount = histogram[i];
+      bestCount = (int)histogram[i];
+    }
+  }
+  if (bestCount == 0) {
+    return 0;
+  }
+
+  // Alignment patterns and adjacent same-color modules bias the peak toward
+  // small integer multiples of the true module size. Walk up from the
+  // smallest captured run and return the first bin that is itself a strong
+  // peak (>= 1/3 of the absolute peak and not just the leading edge of a
+  // smooth ramp). This recovers the fundamental module size on dense codes
+  // without affecting low-version codes whose modules already sit at the
+  // dominant peak.
+  int significantThreshold = std::max(2, bestCount / 3);
+  for (int i = minRun; i <= bestRun; i++) {
+    if (histogram[i] >= significantThreshold &&
+        (i == minRun || histogram[i] >= histogram[i - 1])) {
+      return i;
     }
   }
   return bestRun;
@@ -424,14 +448,41 @@ bool normalizeQRToModuleImage(zxing::ArrayRef<char>& image, int& width, int& hei
       continue;
     }
 
-    // Only test versions whose implied module size is close to the dominant black run length.
+    // Histogram-based version filter. With the improved estimateModuleSize
+    // returning the smallest significant peak, the value is close to the
+    // true module width even on dense high-version codes. Accept the
+    // version when its bbox-implied module size is within ~50% of the
+    // estimate, plus a small additive slack to cover sub-pixel rendering.
     float moduleTolerance = std::max(2.0f, (float)estimatedModuleSize * 0.5f);
     if (std::abs(baseModuleSize - (float)estimatedModuleSize) > moduleTolerance) {
       continue;
     }
 
+    buildFixedModules(version, fixedModules);
+    // Multi-anchor prescore. Sampling a single point at the bbox origin
+    // is unreliable when finder patterns are damaged (bbox can shift by a
+    // few modules). Probe a small grid of offsets around the bbox corner
+    // and use the best score as the gate; this preserves performance for
+    // the typical case while not killing recovery on partially damaged
+    // codes whose true grid origin is offset from the bbox.
+    float anchorPrescore = 0.0f;
+    int anchorStep = std::max(1, (int)(baseModuleSize + 0.5f));
+    for (int dy = -2; dy <= 2 && anchorPrescore < 0.85f; dy++) {
+      for (int dx = -2; dx <= 2 && anchorPrescore < 0.85f; dx++) {
+        int ax = bboxLeft + dx * anchorStep;
+        int ay = bboxTop + dy * anchorStep;
+        float s = scoreCachedQRGrid(image, width, height, comps, fixedModules,
+            ax, ay, baseModuleSize);
+        if (s > anchorPrescore) {
+          anchorPrescore = s;
+        }
+      }
+    }
+    if (anchorPrescore < 0.45f && anchorPrescore < bestScore - 0.05f) {
+      continue;
+    }
+
     float candidateModuleSizes[3] = {baseModuleSize, baseModuleSize + 0.5f, baseModuleSize - 0.5f};
-    bool builtFixedModules = false;
     for (int i = 0; i < 3; i++) {
       float moduleSize = candidateModuleSizes[i];
       if (moduleSize < 2.0f) {
@@ -441,11 +492,6 @@ bool normalizeQRToModuleImage(zxing::ArrayRef<char>& image, int& width, int& hei
       int qrSize = (int)(moduleSize * dimension + 0.5f);
       if (qrSize > std::min(width, height)) {
         continue;
-      }
-
-      if (!builtFixedModules) {
-        buildFixedModules(version, fixedModules);
-        builtFixedModules = true;
       }
 
       int searchRadius = std::max(2, (int)(3.0f * moduleSize));

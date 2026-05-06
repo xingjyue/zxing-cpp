@@ -18,6 +18,8 @@ All samples live under `qr_fig/`:
 - `333_destroy1.png`, `333_destroy2.png`: Version 15 with two finder patterns mostly missing.
 - `888.png`: clean Version 10 (`57x57` modules), decodes as `888`.
 - `888_destroy1.png` to `888_destroy3.png`: Version 10 with one or more damaged finders.
+- `333v15.png`, `333v20.png`, `333v30.png`, `333v35.png`, `333v40.png`: clean high-version stress samples (the `vNN` suffix encodes the QR version, **not** the payload), all rendered at `1080x1080`. Versions 15/20/30/35/40 decode to `333`.
+- `333v38.png`: clean Version 38 sample whose payload is actually `84244086` (the filename only marks the version).
 
 ## Algorithmic Background
 
@@ -42,11 +44,12 @@ The CLI flow now has two strict layers:
 Only if Layer 1 fails does the CLI reload the image with `ImageReaderSource::create(filename, /*repairFixedPatterns=*/true)`. This pipeline tries three repair strategies in order; each one falls back to the next if it cannot satisfy its safety threshold:
 
 1. **Version-aware grid normalization (`normalizeQRToModuleImage`)**
-   - Estimate the dominant module size from a black run-length histogram.
+   - Estimate the dominant module size from a black run-length histogram. The estimator is tuned so it returns the **fundamental module width** even on dense codes (see "Module-size estimator" below).
    - Find the bounding box of the QR content.
-   - For each QR version `v` in `1..40` whose implied module size is within `±max(2, estimatedModuleSize/2)` of the dominant run length:
+   - For each QR version `v` in `1..40` whose implied module size is within `±max(2, estimatedModuleSize/2)` of the estimator output:
      - Pre-compute the deterministic fixed modules of version `v`: three finder patterns, the horizontal and vertical timing patterns, the dark module, and all internal alignment patterns.
-     - Search a small window around the bounding box top-left for a `(gridLeft, gridTop)` whose fixed-module score is highest.
+     - Run a multi-anchor prescore: probe a `5x5` grid of offsets around the bounding box corner with the per-version `baseModuleSize`. If the best probe is below `0.45` and clearly worse than the running best score, skip the spatial search for that version.
+     - Otherwise sweep a small window around the bounding box top-left for a `(gridLeft, gridTop)` whose fixed-module score is highest.
    - Pick the best `(version, gridLeft, gridTop, moduleSize)` overall. If the best score is `>= 0.72`, render a normalized standard QR image:
      - Each module is `8x8` pixels with a quiet zone of 4 modules.
      - Fixed modules are forced to their canonical color.
@@ -69,6 +72,17 @@ The grid normalization is now safe enough to run unconditionally inside Layer 2 
 ### Detector Robustness Tweak
 
 `Detector::processFinderPatternInfo` now retries grid sampling with a 3-finder transform if alignment-pattern based sampling lands a coordinate outside the image. This used to cause `Transformed point out of bounds` failures on legitimate high-version codes such as `333.png`.
+
+### Module-size estimator (added for high-version codes)
+
+`estimateModuleSize` originally counted black runs of length `>= max(3, min(width, height) / 80)`. On a 1080-pixel high-version code the floor became `13 px`, which is **larger than the real module width** (≈ 6 px for v35–v40). The histogram peak then landed on 2- or 3-module clusters, and the version filter `|baseModuleSize - estimatedModuleSize| <= max(2, est/2)` rejected the true high versions before they were even scored. v30 happened to sit inside the tolerance band; v35+ never did.
+
+The estimator now:
+
+- Lowers the run-length floor to `max(2, min(width, height) / 400)` so single-module runs of dense codes contribute to the histogram.
+- After locating the absolute peak `bestRun`, walks **upward from the smallest captured run** and returns the first bin whose count is at least `bestCount / 3` and is itself a non-trailing peak. On dense codes this returns the **fundamental** module width (e.g., `7` for v30 instead of `14`); on low-version codes whose modules already sit at the dominant peak, it returns the same value as before.
+
+Empirically (`333v15.png` … `333v40.png` at 1080×1080), the new estimator returns module widths of `12 / 8 / 7 / 7 / 5 / 5` for v15/v20/v30/v35/v38/v40, which match the real module widths within one pixel for every version. All these versions now satisfy the histogram-based version filter and reach the per-version spatial search and scoring stage.
 
 ## Detailed Pipeline
 
@@ -106,7 +120,7 @@ cd /Users/xingjyue/Desktop/claudecode/project/zxing-cpp
 scripts/verify_qr_damage_samples.sh
 ```
 
-Latest passing output:
+Latest passing output (23 samples, ~45 s on the reference machine):
 
 ```text
 123.png: 123
@@ -126,6 +140,12 @@ Latest passing output:
 888_destroy3.png: 888
 333_destroy1.png: 333
 333_destroy2.png: 333
+333v15.png: 333
+333v20.png: 333
+333v30.png: 333
+333v35.png: 333
+333v38.png: 84244086
+333v40.png: 333
 ```
 
 Normal-decode smoke (no repair invoked, both with and without `--try-harder`):
@@ -136,9 +156,20 @@ Normal-decode smoke (no repair invoked, both with and without `--try-harder`):
 888 -> 888
 ```
 
+### High-version regression analysis
+
+The new `333vNN.png` samples sit in two regimes:
+
+- **Layer 1 succeeds** for low/medium versions (e.g., `333v15.png`).
+- **Layer 1 fails, Layer 2 normalization succeeds** for high versions (`333v30.png` and above) because the dense rendering pushes the standard ZXing detector past its tolerances. Before the estimator fix, only `v30` reached normalization; `v35`/`v38`/`v40` were rejected by the histogram-based version filter and decoded as `decoding failed`. After the estimator fix, all of them reach the spatial search and lock onto the correct grid with score `1.0`.
+
+`333v38.png`'s real payload is `84244086`, not `333`. This was confirmed by upscaling the original 2x and 3x and decoding it via Layer 1 directly. The filename's `v38` only marks the QR version — the `333` prefix is shared with other samples but does not imply the payload. The regression script encodes this expectation explicitly so a future change cannot "fix" the decode by silently producing `333`.
+
 ## Limitations
 
 - All repair logic targets axis-aligned generated QR images. Strong perspective distortion or curved surfaces need a dewarping stage before these steps.
 - The version-aware normalization gives up if the best candidate score is below `0.72`. This is intentional; we prefer to fail loudly rather than emit garbage data.
+- The module-size estimator assumes that **single-module black runs are the most numerous run-length** in the image. This holds for axis-aligned generated QRs where the renderer produces near-integer module widths. For images with strong anti-aliasing, blur, or sub-sampled rendering, the histogram peak may still drift; the multi-anchor prescore + the `>= 0.72` score gate are the second line of defense.
 - Connected-component finder repair refuses to touch components whose aspect ratio is not finder-like, to avoid mistaking large black blobs for finders.
 - If payload damage exceeds the QR Reed-Solomon capacity, fixed-pattern repair alone is not enough. Bit-level erasure handling and exhaustive mask/version brute-force would be needed in that case.
+- The repair pipeline **does not infer** the version from format/version-info bits; it relies on the bbox-derived `baseModuleSize`. As a result, adjacent versions with very similar `bboxSize/dimension` ratios are disambiguated only by the fixed-pattern score. Adding a version-info BCH check would make this more robust on synthetic edge cases.
