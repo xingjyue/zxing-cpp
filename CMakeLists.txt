@@ -70,22 +70,38 @@ endif()
 
 # Add OpenCV cli executable
 if(OpenCV_FOUND)
-    file(GLOB_RECURSE OPENCV_ZXING_FILES
-        "./opencv-cli/src/*.cpp"
-        "./opencv-cli/src/*.h"
+    set(OPENCV_ZXING_FILES
+        "./opencv-cli/src/main.cpp"
     )
     add_executable(zxing-cv ${OPENCV_ZXING_FILES})
     target_link_libraries(zxing-cv libzxing ${OpenCV_LIBRARIES})
 endif()
 
 # Add cli executable.
-file(GLOB_RECURSE ZXING_FILES
-    "./cli/src/*.cpp"
-    "./cli/src/*.h"
+set(ZXING_FILES
+    "./cli/src/main.cpp"
+    "./cli/src/ImageReaderSource.cpp"
+    "./cli/src/ImageReaderSource.h"
+    "./cli/src/lodepng.cpp"
+    "./cli/src/lodepng.h"
+    "./cli/src/jpgd.cpp"
+    "./cli/src/jpgd.h"
 )
 
 add_executable(zxing ${ZXING_FILES})
 target_link_libraries(zxing libzxing)
+
+# Add finder pattern marker tool (no OpenCV dependency)
+set(FINDER_MARKER_FILES
+    "./finder-marker/main.cpp"
+    "./cli/src/lodepng.cpp"
+    "./cli/src/lodepng.h"
+    "./cli/src/jpgd.cpp"
+    "./cli/src/jpgd.h"
+)
+add_executable(zxing-finder-marker ${FINDER_MARKER_FILES})
+target_include_directories(zxing-finder-marker PRIVATE "./cli/src")
+target_link_libraries(zxing-finder-marker libzxing)
 
 install(TARGETS zxing libzxing EXPORT zxing-targets
 	LIBRARY DESTINATION lib

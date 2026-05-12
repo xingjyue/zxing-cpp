@@ -1,27 +1,15 @@
 set(LIBZXING_FILES
     core/src/bigint/BigInteger.cc
-    core/src/bigint/BigInteger.cc
-    core/src/bigint/BigInteger.hh
     core/src/bigint/BigInteger.hh
     core/src/bigint/BigIntegerAlgorithms.cc
-    core/src/bigint/BigIntegerAlgorithms.cc
-    core/src/bigint/BigIntegerAlgorithms.hh
     core/src/bigint/BigIntegerAlgorithms.hh
     core/src/bigint/BigIntegerLibrary.hh
-    core/src/bigint/BigIntegerLibrary.hh
-    core/src/bigint/BigIntegerUtils.cc
     core/src/bigint/BigIntegerUtils.cc
     core/src/bigint/BigIntegerUtils.hh
-    core/src/bigint/BigIntegerUtils.hh
-    core/src/bigint/BigUnsigned.cc
     core/src/bigint/BigUnsigned.cc
     core/src/bigint/BigUnsigned.hh
-    core/src/bigint/BigUnsigned.hh
-    core/src/bigint/BigUnsignedInABase.cc
     core/src/bigint/BigUnsignedInABase.cc
     core/src/bigint/BigUnsignedInABase.hh
-    core/src/bigint/BigUnsignedInABase.hh
-    core/src/bigint/NumberlikeArray.hh
     core/src/bigint/NumberlikeArray.hh
     core/src/zxing/aztec/AztecDetectorResult.cpp
     core/src/zxing/aztec/AztecDetectorResult.h
