@@ -53,15 +53,19 @@ protected:
   /** stateCount must be int[5] */
   static float centerFromEnd(int* stateCount, int end);
   bool foundPatternCross(int* stateCount);
+  bool foundPatternCrossPartial(int* stateCount);
 
   float crossCheckVertical(size_t startI, size_t centerJ, int maxCount, int originalStateCountTotal);
   float crossCheckHorizontal(size_t startJ, size_t centerI, int maxCount, int originalStateCountTotal);
 
   /** stateCount must be int[5] */
   bool handlePossibleCenter(int* stateCount, size_t i, size_t j);
+  bool handlePossibleCenterPartial(int* stateCount, size_t i, size_t j);
   int findRowSkip();
   bool haveMultiplyConfirmedCenters();
   std::vector<Ref<FinderPattern> > selectBestPatterns();
+  std::vector<Ref<FinderPattern> > inferThirdFromTwo(
+      Ref<FinderPattern> a, Ref<FinderPattern> b);
   static std::vector<Ref<FinderPattern> > orderBestPatterns(std::vector<Ref<FinderPattern> > patterns);
 
   Ref<BitMatrix> getImage();

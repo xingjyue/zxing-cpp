@@ -365,11 +365,25 @@ void processImage(const string& filepath) {
             float maxDisplacement = matchPatterns(patterns, verifyPatterns, matchIdx);
 
             // If verification positions differ by > 2 modules, original detection
-            // was unreliable. Re-repair at the verification positions.
+            // was unreliable. Re-repair using verification positions as base.
             if (maxDisplacement > 2.0f * origAvgMs) {
                 cout << "  Positions shifted by " << maxDisplacement
                      << "px — re-repairing at verified positions" << endl;
-                renderRepairedMatrix(matrix, verifyPatterns, repairedPixels);
+
+                // Build base matrix from the already-repaired image so
+                // the second pass converges on top of the first repair.
+                {
+                    ArrayRef<char> baseArr((char*)&repairedPixels[0],
+                                            (int)repairedPixels.size());
+                    Ref<LuminanceSource> baseSrc(
+                        new RawImageSource(baseArr, rw, rh, 4));
+                    Ref<Binarizer> baseBin(
+                        new GlobalHistogramBinarizer(baseSrc));
+                    Ref<BinaryBitmap> baseBmp(new BinaryBitmap(baseBin));
+                    Ref<BitMatrix> baseMat = baseBmp->getBlackMatrix();
+                    renderRepairedMatrix(baseMat, verifyPatterns,
+                                        repairedPixels);
+                }
 
                 // Verify again on the re-repaired image
                 Ref<FinderPattern> final[3];
@@ -379,7 +393,10 @@ void processImage(const string& filepath) {
                     float d2 = matchPatterns(verifyPatterns, final, m2);
                     if (d2 >= 0) {
                         cout << "  Final check: displacement " << d2
-                             << "px — positions stable." << endl;
+                             << "px — "
+                             << (d2 <= 2.0f * finalMs ? "stable." :
+                                 "still shifting, using best available.")
+                             << endl;
                     }
                 }
             } else if (maxDisplacement >= 0) {

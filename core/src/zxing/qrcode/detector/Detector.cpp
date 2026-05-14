@@ -43,6 +43,8 @@ using zxing::ResultPointCallback;
 using zxing::DetectorResult;
 using zxing::PerspectiveTransform;
 using zxing::qrcode::AlignmentPattern;
+using zxing::qrcode::FinderPattern;
+using zxing::qrcode::FinderPatternInfo;
 using zxing::common::detector::MathUtils;
 
 // VC++

@@ -189,6 +189,8 @@ set(LIBZXING_FILES
     core/src/zxing/qrcode/detector/FinderPatternFinder.h
     core/src/zxing/qrcode/detector/FinderPatternInfo.cpp
     core/src/zxing/qrcode/detector/FinderPatternInfo.h
+    core/src/zxing/qrcode/detector/FinderPatternTemplateMatcher.cpp
+    core/src/zxing/qrcode/detector/FinderPatternTemplateMatcher.h
     core/src/zxing/qrcode/ErrorCorrectionLevel.cpp
     core/src/zxing/qrcode/ErrorCorrectionLevel.h
     core/src/zxing/qrcode/FormatInformation.cpp

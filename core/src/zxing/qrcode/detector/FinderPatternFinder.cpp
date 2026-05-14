@@ -26,6 +26,7 @@
 
 using std::sort;
 using std::max;
+using std::min;
 using std::abs;
 using std::vector;
 using zxing::Ref;
@@ -101,6 +102,45 @@ bool FinderPatternFinder::foundPatternCross(int* stateCount) {
   return abs(moduleSize - stateCount[0]) < maxVariance && abs(moduleSize - stateCount[1]) < maxVariance && abs(3.0f
          * moduleSize - stateCount[2]) < 3.0f * maxVariance && abs(moduleSize - stateCount[3]) < maxVariance && abs(
            moduleSize - stateCount[4]) < maxVariance;
+}
+
+bool FinderPatternFinder::foundPatternCrossPartial(int* stateCount) {
+  // Accept patterns where only 3 of 5 segments match the expected 1:1:3:1:1 ratio.
+  // This handles partially occluded finder patterns where 1-2 outer segments
+  // are broken. Checks three overlapping windows of 3 consecutive segments.
+  int totalModuleSize = 0;
+  for (int i = 0; i < 5; i++) {
+    if (stateCount[i] == 0) return false;
+    totalModuleSize += stateCount[i];
+  }
+  if (totalModuleSize < 7) return false;
+
+  float moduleSize = (float)totalModuleSize / 7.0f;
+  // Stricter tolerance for partial patterns: 45% for normal, 70% for tryHarder
+  float maxVariance = tryHarder_ ? moduleSize * 0.7f : moduleSize * 0.45f;
+
+  // Center 3: segments 1,2,3 should match 1:3:1 ratio
+  float c3Sum = (float)(stateCount[1] + stateCount[2] + stateCount[3]);
+  float c3Ms = c3Sum / 5.0f;  // expected: 1+3+1=5 modules
+  bool centerOk = abs(c3Ms - stateCount[1]) < maxVariance &&
+                  abs(3.0f * c3Ms - stateCount[2]) < 3.0f * maxVariance &&
+                  abs(c3Ms - stateCount[3]) < maxVariance;
+
+  // Left 3: segments 0,1,2 should match 1:1:3 ratio
+  float l3Sum = (float)(stateCount[0] + stateCount[1] + stateCount[2]);
+  float l3Ms = l3Sum / 5.0f;  // 1+1+3=5 modules
+  bool leftOk = abs(l3Ms - stateCount[0]) < maxVariance &&
+                abs(l3Ms - stateCount[1]) < maxVariance &&
+                abs(3.0f * l3Ms - stateCount[2]) < 3.0f * maxVariance;
+
+  // Right 3: segments 2,3,4 should match 3:1:1 ratio
+  float r3Sum = (float)(stateCount[2] + stateCount[3] + stateCount[4]);
+  float r3Ms = r3Sum / 5.0f;
+  bool rightOk = abs(3.0f * r3Ms - stateCount[2]) < 3.0f * maxVariance &&
+                 abs(r3Ms - stateCount[3]) < maxVariance &&
+                 abs(r3Ms - stateCount[4]) < maxVariance;
+
+  return centerOk || leftOk || rightOk;
 }
 
 float FinderPatternFinder::crossCheckVertical(size_t startI, size_t centerJ, int maxCount, int originalStateCountTotal) {
@@ -269,6 +309,43 @@ bool FinderPatternFinder::handlePossibleCenter(int* stateCount, size_t i, size_t
   return false;
 }
 
+bool FinderPatternFinder::handlePossibleCenterPartial(int* stateCount, size_t i, size_t j) {
+  // Wider cross-check tolerances for partially occluded finder patterns.
+  // The pattern may lack 1-2 outer segments, so we allow 1.5x the center
+  // width for vertical/horizontal cross-check ranges.
+  int stateCountTotal = stateCount[0] + stateCount[1] + stateCount[2] +
+                        stateCount[3] + stateCount[4];
+  float centerJ = centerFromEnd(stateCount, j);
+  // Allow wider search range for cross checks
+  int wideMaxCount = stateCount[2] + (stateCount[2] >> 1);  // 1.5x
+  float centerI = crossCheckVertical(i, (size_t)centerJ, wideMaxCount, stateCountTotal);
+  if (!isnan(centerI)) {
+    centerJ = crossCheckHorizontal((size_t)centerJ, (size_t)centerI, wideMaxCount, stateCountTotal);
+    if (!isnan(centerJ)) {
+      float estimatedModuleSize = (float)stateCountTotal / 7.0f;
+      bool found = false;
+      size_t max = possibleCenters_.size();
+      for (size_t index = 0; index < max; index++) {
+        Ref<FinderPattern> center = possibleCenters_[index];
+        if (center->aboutEquals(estimatedModuleSize, centerI, centerJ)) {
+          possibleCenters_[index] = center->combineEstimate(centerI, centerJ, estimatedModuleSize);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        Ref<FinderPattern> newPattern(new FinderPattern(centerJ, centerI, estimatedModuleSize));
+        possibleCenters_.push_back(newPattern);
+        if (callback_ != 0) {
+          callback_->foundPossibleResultPoint(*newPattern);
+        }
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 int FinderPatternFinder::findRowSkip() {
   size_t max = possibleCenters_.size();
   if (max <= 1) {
@@ -322,10 +399,112 @@ bool FinderPatternFinder::haveMultiplyConfirmedCenters() {
   return totalDeviation <= 0.05f * totalModuleSize;
 }
 
+vector< Ref<FinderPattern> > FinderPatternFinder::inferThirdFromTwo(
+    Ref<FinderPattern> a, Ref<FinderPattern> b) {
+  // Given two finder patterns A and B, infer the third using right-isosceles
+  // triangle geometry. In a QR code, the three finder patterns form a
+  // right isosceles triangle. The third point C satisfies:
+  //   C = A + (B - A)_perp   or   C = A - (B - A)_perp
+  // where perpendicular rotation is (-dy, dx) or (dy, -dx).
+
+  float ax = a->getX(), ay = a->getY();
+  float bx = b->getX(), by = b->getY();
+  float dx = bx - ax, dy = by - ay;
+  float avgMs = (a->getEstimatedModuleSize() + b->getEstimatedModuleSize()) / 2.0f;
+
+  // Two candidate positions for the 3rd finder
+  float candidates[4] = {
+    ax - dy, ay + dx,   // perpendicular counter-clockwise
+    ax + dy, ay - dx    // perpendicular clockwise
+  };
+
+  BitMatrix& matrix = *image_;
+  int maxI = (int)image_->getHeight();
+  int maxJ = (int)image_->getWidth();
+
+  for (int c = 0; c < 2; c++) {
+    float cx = candidates[c * 2];
+    float cy = candidates[c * 2 + 1];
+
+    // Check bounds with some margin
+    int margin = (int)(avgMs * 7);
+    if ((int)cx < margin || (int)cx >= maxJ - margin ||
+        (int)cy < margin || (int)cy >= maxI - margin) {
+      continue;
+    }
+
+    // Scan horizontally through the candidate center for 1:1:3:1:1 ratio
+    int hStateCount[5] = {0, 0, 0, 0, 0};
+    int hState = 0;
+    int ci = (int)cy;
+    int startJ = std::max(0, (int)(cx - avgMs * 7));
+    int endJ = std::min(maxJ - 1, (int)(cx + avgMs * 7));
+    bool lastBlack = matrix.get(startJ, ci);
+    for (int j = startJ; j <= endJ && hState < 5; j++) {
+      bool black = matrix.get(j, ci);
+      if (black != lastBlack) {
+        if (hState < 4) hState++;
+        else break;
+        lastBlack = black;
+      }
+      hStateCount[hState]++;
+    }
+    if (hState < 4) continue;
+    // Adjust: first state should be black
+    if (!matrix.get(startJ, ci)) {
+      for (int k = 4; k > 0; k--) hStateCount[k] = hStateCount[k-1];
+      hStateCount[0] = 0;
+    }
+    if (!foundPatternCross(hStateCount)) continue;
+
+    // Scan vertically through the candidate center
+    int vStateCount[5] = {0, 0, 0, 0, 0};
+    int vState = 0;
+    int cj = (int)cx;
+    int startI = std::max(0, (int)(cy - avgMs * 7));
+    int endI = std::min(maxI - 1, (int)(cy + avgMs * 7));
+    lastBlack = matrix.get(cj, startI);
+    for (int i = startI; i <= endI && vState < 5; i++) {
+      bool black = matrix.get(cj, i);
+      if (black != lastBlack) {
+        if (vState < 4) vState++;
+        else break;
+        lastBlack = black;
+      }
+      vStateCount[vState]++;
+    }
+    if (vState < 4) continue;
+    if (!matrix.get(cj, startI)) {
+      for (int k = 4; k > 0; k--) vStateCount[k] = vStateCount[k-1];
+      vStateCount[0] = 0;
+    }
+    if (!foundPatternCross(vStateCount)) continue;
+
+    // Both scans passed — create a synthesized FinderPattern
+    float hTotal = (float)(hStateCount[0] + hStateCount[1] + hStateCount[2] +
+                           hStateCount[3] + hStateCount[4]);
+    float vTotal = (float)(vStateCount[0] + vStateCount[1] + vStateCount[2] +
+                           vStateCount[3] + vStateCount[4]);
+    float inferredMs = (hTotal + vTotal) / 14.0f;  // 7 modules each
+
+    Ref<FinderPattern> third(new FinderPattern(cx, cy, inferredMs));
+    vector<Ref<FinderPattern> > result(3);
+    result[0] = a;
+    result[1] = b;
+    result[2] = third;
+    return result;
+  }
+
+  throw zxing::ReaderException("Could not find three finder patterns");
+}
+
 vector< Ref<FinderPattern> > FinderPatternFinder::selectBestPatterns() {
   size_t startSize = possibleCenters_.size();
 
   if (startSize < 3) {
+    if (startSize == 2) {
+      return inferThirdFromTwo(possibleCenters_[0], possibleCenters_[1]);
+    }
     // Couldn't find enough finder patterns
     throw zxing::ReaderException("Could not find three finder patterns");
   }
@@ -481,23 +660,12 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
             if (foundPatternCross(stateCount)) { // Yes
               bool confirmed = handlePossibleCenter(stateCount, i, j);
               if (confirmed) {
-                // Start examining every other line. Checking each line turned out to be too
-                // expensive and didn't improve performance.
                 iSkip = 2;
                 if (hasSkipped_) {
                   done = haveMultiplyConfirmedCenters();
                 } else {
                   int rowSkip = findRowSkip();
                   if (rowSkip > stateCount[2]) {
-                    // Skip rows between row of lower confirmed center
-                    // and top of presumed third confirmed center
-                    // but back up a bit to get a full chance of detecting
-                    // it, entire width of center of finder pattern
-
-                    // Skip by rowSkip, but back off by stateCount[2] (size
-                    // of last center of pattern we saw) to be conservative,
-                    // and also back off by iSkip which is about to be
-                    // re-added
                     i += rowSkip - stateCount[2] - iSkip;
                     j = maxJ - 1;
                   }
@@ -539,10 +707,11 @@ Ref<FinderPatternInfo> FinderPatternFinder::find(DecodeHints const& hints) {
       if (confirmed) {
         iSkip = stateCount[0];
         if (hasSkipped_) {
-          // Found a third one
           done = haveMultiplyConfirmedCenters();
         }
       }
+    } else if (foundPatternCrossPartial(stateCount)) {
+      handlePossibleCenterPartial(stateCount, i, maxJ);
     }
   }
 
