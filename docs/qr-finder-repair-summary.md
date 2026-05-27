@@ -41,31 +41,28 @@ The CLI flow now has two strict layers:
 
 ### Layer 2: Repair-Then-Retry
 
-Only if Layer 1 fails does the CLI reload the image with `ImageReaderSource::create(filename, /*repairFixedPatterns=*/true)`. This pipeline tries three repair strategies in order; each one falls back to the next if it cannot satisfy its safety threshold:
+Only if Layer 1 fails does the CLI reload the image with `ImageReaderSource::create(filename, /*repairFixedPatterns=*/true)`. This pipeline tries two repair strategies in order; each one falls back to the next if it cannot satisfy its safety threshold:
 
 1. **Version-aware grid normalization (`normalizeQRToModuleImage`)**
    - Estimate the dominant module size from a black run-length histogram. The estimator is tuned so it returns the **fundamental module width** even on dense codes (see "Module-size estimator" below).
    - Find the bounding box of the QR content.
-   - For each QR version `v` in `1..40` whose implied module size is within `±max(2, estimatedModuleSize/2)` of the estimator output:
+   - For each QR version `v` in `1..40` whose implied module size is within `±max(2, estimatedModuleSize/2)` of the estimator output when the estimate is reliable. If the estimate is below 4 pixels, keep the version in the search because photographed print texture can create many tiny black runs.
      - Pre-compute the deterministic fixed modules of version `v`: three finder patterns, the horizontal and vertical timing patterns, the dark module, and all internal alignment patterns.
      - Run a multi-anchor prescore: probe a `5x5` grid of offsets around the bounding box corner with the per-version `baseModuleSize`. If the best probe is below `0.45` and clearly worse than the running best score, skip the spatial search for that version.
      - Otherwise sweep a small window around the bounding box top-left for a `(gridLeft, gridTop)` whose fixed-module score is highest.
-   - Pick the best `(version, gridLeft, gridTop, moduleSize)` overall. If the best score is `>= 0.72`, render a normalized standard QR image:
+   - Pick the best `(version, gridLeft, gridTop, moduleSize)` overall. If the best score is `>= 0.55`, render a normalized standard QR image:
      - Each module is `8x8` pixels with a quiet zone of 4 modules.
      - Fixed modules are forced to their canonical color.
-     - Data modules are sampled from the original image at the inferred grid.
+     - Data modules are sampled from the original image at the inferred grid using an inner-module majority vote.
    - Hand this clean module image to ZXing.
-2. **Version-1 fixed-pattern restoration (`repairQRFixedPatterns`)**
-   - Specialized fallback for `21x21` codes that the normalization could not lock in.
-   - Redraws the three finder patterns and the timing patterns at the best Version 1 grid match.
-3. **Version-independent finder restoration (`repairDamagedFinderPatterns`)**
+2. **Version-independent finder restoration (`repairDamagedFinderPatterns`)**
    - Connected-component scan for finder-shaped survivors.
    - Recognizes left-edge or right-edge damage and redraws the affected finder.
    - Tries multiple alignment hypotheses around each candidate component, but only writes a finder when the candidate score passes the structural check, so it does not corrupt valid data modules.
 
-The grid normalization is now safe enough to run unconditionally inside Layer 2 because:
+The grid normalization is version-generic and safe enough to run unconditionally inside Layer 2 because:
 
-- The version filter based on `estimatedModuleSize` keeps the search bounded.
+- The version filter based on `estimatedModuleSize` keeps the search bounded when the estimate is reliable; low estimates from photographed texture are treated as unreliable and are not used as hard gates.
 - Fixed modules are pre-computed per version, so the inner loop is small even for Version 40.
 - Layer 2 only runs after Layer 1 has already failed; it never touches healthy decoding.
 
@@ -95,12 +92,11 @@ For each PNG/JPEG handed to the CLI:
 5. Run version-aware grid normalization:
    - Estimate dominant module size from row/column black run-length histogram.
    - Compute bounding box of all black content.
-   - For each QR version whose implied module size matches the histogram, sweep a small window around the bounding box top-left and score against pre-computed fixed modules.
-   - If the best score >= 0.72, rebuild a normalized canonical QR image (8 px modules, 4-module quiet zone) and hand it to ZXing.
-6. If grid normalization is not confident enough, try Version 1 fixed-pattern restoration.
-7. If neither applied, run version-independent connected-component finder restoration.
-8. Pass the (possibly repaired) luminance source through ZXing's normal decode path.
-9. If `--try-harder` is requested but the relaxed finder search picks an inconsistent triplet, the CLI falls back to a normal-mode retry.
+   - For each QR version whose implied module size matches a reliable histogram estimate, sweep a small window around the bounding box top-left and score against pre-computed fixed modules.
+   - If the best score >= 0.55, rebuild a normalized canonical QR image (8 px modules, 4-module quiet zone) and hand it to ZXing.
+6. If grid normalization is not confident enough, run version-independent connected-component finder restoration.
+7. Pass the (possibly repaired) luminance source through ZXing's normal decode path.
+8. If `--try-harder` is requested but the relaxed finder search picks an inconsistent triplet, the CLI falls back to a normal-mode retry.
 
 ## Verification
 
@@ -168,8 +164,8 @@ The new `333vNN.png` samples sit in two regimes:
 ## Limitations
 
 - All repair logic targets axis-aligned generated QR images. Strong perspective distortion or curved surfaces need a dewarping stage before these steps.
-- The version-aware normalization gives up if the best candidate score is below `0.72`. This is intentional; we prefer to fail loudly rather than emit garbage data.
-- The module-size estimator assumes that **single-module black runs are the most numerous run-length** in the image. This holds for axis-aligned generated QRs where the renderer produces near-integer module widths. For images with strong anti-aliasing, blur, or sub-sampled rendering, the histogram peak may still drift; the multi-anchor prescore + the `>= 0.72` score gate are the second line of defense.
+- The version-aware normalization gives up if the best candidate score is below `0.55`. This still avoids arbitrary grids while allowing damaged fixed patterns in photographed samples.
+- The module-size estimator assumes that **single-module black runs are the most numerous run-length** in the image. This holds for axis-aligned generated QRs where the renderer produces near-integer module widths. For images with strong anti-aliasing, blur, sub-sampled rendering, or photographed texture, the histogram peak may still drift; the multi-anchor prescore + the `>= 0.55` score gate are the second line of defense.
 - Connected-component finder repair refuses to touch components whose aspect ratio is not finder-like, to avoid mistaking large black blobs for finders.
 - If payload damage exceeds the QR Reed-Solomon capacity, fixed-pattern repair alone is not enough. Bit-level erasure handling and exhaustive mask/version brute-force would be needed in that case.
 - The repair pipeline **does not infer** the version from format/version-info bits; it relies on the bbox-derived `baseModuleSize`. As a result, adjacent versions with very similar `bboxSize/dimension` ratios are disambiguated only by the fixed-pattern score. Adding a version-info BCH check would make this more robust on synthetic edge cases.

@@ -41,15 +41,6 @@ struct Component {
   int area;
 };
 
-struct QRGrid {
-  int version;
-  int dimension;
-  int moduleSize;
-  int left;
-  int top;
-  float score;
-};
-
 inline unsigned char luminanceAt(zxing::ArrayRef<char> const& image, int width, int comps, int x, int y) {
   unsigned char const* pixel = reinterpret_cast<unsigned char const*>(&image[(y * width + x) * comps]);
   if (comps == 1 || comps == 2) {
@@ -110,22 +101,6 @@ void drawFinderPattern(zxing::ArrayRef<char>& image, int width, int height, int 
   for (int y = top + moduleSize * 2; y < top + moduleSize * 5; y++) {
     for (int x = left + moduleSize * 2; x < left + moduleSize * 5; x++) {
       setPixel(image, width, comps, x, y, 0);
-    }
-  }
-}
-
-void drawModule(zxing::ArrayRef<char>& image, int width, int height, int comps,
-                int gridLeft, int gridTop, int moduleSize, int moduleX, int moduleY,
-                unsigned char value) {
-  int left = gridLeft + moduleX * moduleSize;
-  int top = gridTop + moduleY * moduleSize;
-  if (left < 0 || top < 0 || left + moduleSize > width || top + moduleSize > height) {
-    return;
-  }
-
-  for (int y = top; y < top + moduleSize; y++) {
-    for (int x = left; x < left + moduleSize; x++) {
-      setPixel(image, width, comps, x, y, value);
     }
   }
 }
@@ -267,30 +242,6 @@ int estimateModuleSize(zxing::ArrayRef<char> const& image, int width, int height
   return bestRun;
 }
 
-int estimateContentDimension(zxing::ArrayRef<char> const& image, int width, int height, int comps, int moduleSize) {
-  int minX = width;
-  int minY = height;
-  int maxX = -1;
-  int maxY = -1;
-  int border = 5;
-  for (int y = border; y < height - border; y++) {
-    for (int x = border; x < width - border; x++) {
-      if (luminanceAt(image, width, comps, x, y) < 80) {
-        minX = std::min(minX, x);
-        minY = std::min(minY, y);
-        maxX = std::max(maxX, x);
-        maxY = std::max(maxY, y);
-      }
-    }
-  }
-  if (maxX < minX || maxY < minY || moduleSize <= 0) {
-    return 0;
-  }
-
-  int contentSpan = std::max(maxX - minX + 1, maxY - minY + 1);
-  return (contentSpan + moduleSize / 2) / moduleSize;
-}
-
 bool findContentBounds(zxing::ArrayRef<char> const& image, int width, int height, int comps,
                        int& left, int& top, int& size) {
   int minX = width;
@@ -318,67 +269,6 @@ bool findContentBounds(zxing::ArrayRef<char> const& image, int width, int height
   return true;
 }
 
-float scoreQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                  int version, int gridLeft, int gridTop, int moduleSize) {
-  int matches = 0;
-  int total = 0;
-  int dimension = 17 + 4 * version;
-  for (int moduleY = 0; moduleY < dimension; moduleY++) {
-    for (int moduleX = 0; moduleX < dimension; moduleX++) {
-      bool expectedBlack = false;
-      if (!fixedModuleForVersion(version, moduleX, moduleY, expectedBlack)) {
-        continue;
-      }
-
-      int sampleX = gridLeft + moduleX * moduleSize + moduleSize / 2;
-      int sampleY = gridTop + moduleY * moduleSize + moduleSize / 2;
-      if (sampleX < 0 || sampleY < 0 || sampleX >= width || sampleY >= height) {
-        continue;
-      }
-
-      bool actualBlack = luminanceAt(image, width, comps, sampleX, sampleY) < 80;
-      if (actualBlack == expectedBlack) {
-        matches++;
-      }
-      total++;
-    }
-  }
-  return total == 0 ? 0.0f : (float)matches / (float)total;
-}
-
-float scoreFloatQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                       int version, int gridLeft, int gridTop, int gridSize) {
-  int dimension = 17 + 4 * version;
-  float moduleSize = (float)gridSize / (float)dimension;
-  if (moduleSize < 2.0f) {
-    return 0.0f;
-  }
-
-  int matches = 0;
-  int total = 0;
-  for (int moduleY = 0; moduleY < dimension; moduleY++) {
-    for (int moduleX = 0; moduleX < dimension; moduleX++) {
-      bool expectedBlack = false;
-      if (!fixedModuleForVersion(version, moduleX, moduleY, expectedBlack)) {
-        continue;
-      }
-
-      int sampleX = gridLeft + (int)((moduleX + 0.5f) * moduleSize + 0.5f);
-      int sampleY = gridTop + (int)((moduleY + 0.5f) * moduleSize + 0.5f);
-      if (sampleX < 0 || sampleY < 0 || sampleX >= width || sampleY >= height) {
-        continue;
-      }
-
-      bool actualBlack = luminanceAt(image, width, comps, sampleX, sampleY) < 80;
-      if (actualBlack == expectedBlack) {
-        matches++;
-      }
-      total++;
-    }
-  }
-  return total == 0 ? 0.0f : (float)matches / (float)total;
-}
-
 struct FixedModuleEntry {
   int x;
   int y;
@@ -400,6 +290,33 @@ void buildFixedModules(int version, std::vector<FixedModuleEntry>& out) {
   }
 }
 
+float moduleBlackFraction(zxing::ArrayRef<char> const& image, int width, int height, int comps,
+                          int gridLeft, int gridTop, float moduleSize, int moduleX, int moduleY) {
+  int left = gridLeft + (int)(moduleX * moduleSize + moduleSize * 0.2f + 0.5f);
+  int top = gridTop + (int)(moduleY * moduleSize + moduleSize * 0.2f + 0.5f);
+  int right = gridLeft + (int)((moduleX + 1) * moduleSize - moduleSize * 0.2f + 0.5f);
+  int bottom = gridTop + (int)((moduleY + 1) * moduleSize - moduleSize * 0.2f + 0.5f);
+  left = std::max(0, std::min(width, left));
+  right = std::max(0, std::min(width, right));
+  top = std::max(0, std::min(height, top));
+  bottom = std::max(0, std::min(height, bottom));
+  if (left >= right || top >= bottom) {
+    return -1.0f;
+  }
+
+  int black = 0;
+  int total = 0;
+  for (int y = top; y < bottom; y++) {
+    for (int x = left; x < right; x++) {
+      if (luminanceAt(image, width, comps, x, y) < 80) {
+        black++;
+      }
+      total++;
+    }
+  }
+  return total == 0 ? -1.0f : (float)black / (float)total;
+}
+
 float scoreCachedQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
                         std::vector<FixedModuleEntry> const& fixedModules,
                         int gridLeft, int gridTop, float moduleSize) {
@@ -407,12 +324,12 @@ float scoreCachedQRGrid(zxing::ArrayRef<char> const& image, int width, int heigh
   int total = 0;
   for (size_t i = 0; i < fixedModules.size(); i++) {
     FixedModuleEntry const& entry = fixedModules[i];
-    int sampleX = gridLeft + (int)((entry.x + 0.5f) * moduleSize + 0.5f);
-    int sampleY = gridTop + (int)((entry.y + 0.5f) * moduleSize + 0.5f);
-    if (sampleX < 0 || sampleY < 0 || sampleX >= width || sampleY >= height) {
+    float black = moduleBlackFraction(image, width, height, comps, gridLeft, gridTop,
+        moduleSize, entry.x, entry.y);
+    if (black < 0.0f) {
       continue;
     }
-    bool actualBlack = luminanceAt(image, width, comps, sampleX, sampleY) < 80;
+    bool actualBlack = black > 0.5f;
     if (actualBlack == entry.isBlack) {
       matches++;
     }
@@ -448,14 +365,15 @@ bool normalizeQRToModuleImage(zxing::ArrayRef<char>& image, int& width, int& hei
       continue;
     }
 
-    // Histogram-based version filter. With the improved estimateModuleSize
-    // returning the smallest significant peak, the value is close to the
-    // true module width even on dense high-version codes. Accept the
-    // version when its bbox-implied module size is within ~50% of the
-    // estimate, plus a small additive slack to cover sub-pixel rendering.
-    float moduleTolerance = std::max(2.0f, (float)estimatedModuleSize * 0.5f);
-    if (std::abs(baseModuleSize - (float)estimatedModuleSize) > moduleTolerance) {
-      continue;
+    // Histogram-based module estimates are useful on clean synthetic images,
+    // but photographed print texture can create many tiny dark runs and push
+    // the estimate down to 2-3 pixels. In that case, keep the version in the
+    // search and let the fixed-pattern score decide.
+    if (estimatedModuleSize >= 4) {
+      float moduleTolerance = std::max(2.0f, (float)estimatedModuleSize * 0.5f);
+      if (std::abs(baseModuleSize - (float)estimatedModuleSize) > moduleTolerance) {
+        continue;
+      }
     }
 
     buildFixedModules(version, fixedModules);
@@ -516,7 +434,7 @@ bool normalizeQRToModuleImage(zxing::ArrayRef<char>& image, int& width, int& hei
     }
   }
 
-  if (bestVersion == 0 || bestScore < 0.72f) {
+  if (bestVersion == 0 || bestScore < 0.55f) {
     return false;
   }
 
@@ -539,11 +457,10 @@ bool normalizeQRToModuleImage(zxing::ArrayRef<char>& image, int& width, int& hei
     for (int moduleX = 0; moduleX < dimension; moduleX++) {
       bool fixedBlack = false;
       bool hasFixedValue = fixedModuleForVersion(bestVersion, moduleX, moduleY, fixedBlack);
-      int sampleX = gridLeft + (int)((moduleX + 0.5f) * moduleSize + 0.5f);
-      int sampleY = gridTop + (int)((moduleY + 0.5f) * moduleSize + 0.5f);
+      float black = moduleBlackFraction(image, width, height, comps, gridLeft, gridTop,
+          moduleSize, moduleX, moduleY);
       bool isBlack = hasFixedValue ? fixedBlack :
-          (sampleX >= 0 && sampleY >= 0 && sampleX < width && sampleY < height &&
-           luminanceAt(image, width, comps, sampleX, sampleY) < 80);
+          (black > 0.5f);
       if (!isBlack) {
         continue;
       }
@@ -562,137 +479,6 @@ bool normalizeQRToModuleImage(zxing::ArrayRef<char>& image, int& width, int& hei
   width = normalizedWidth;
   height = normalizedHeight;
   comps = 4;
-  return true;
-}
-
-void refineQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                  int version, int moduleSize, int centerLeft, int centerTop, int radius,
-                  QRGrid& best) {
-  int dimension = 17 + 4 * version;
-  int qrSize = dimension * moduleSize;
-  if (qrSize > width || qrSize > height) {
-    return;
-  }
-
-  int minLeft = std::max(0, centerLeft - radius);
-  int maxLeft = std::min(width - qrSize, centerLeft + radius);
-  int minTop = std::max(0, centerTop - radius);
-  int maxTop = std::min(height - qrSize, centerTop + radius);
-  for (int top = minTop; top <= maxTop; top++) {
-    for (int left = minLeft; left <= maxLeft; left++) {
-      float score = scoreQRGrid(image, width, height, comps, version, left, top, moduleSize);
-      if (score > best.score ||
-          (std::abs(score - best.score) < 0.0001f &&
-           (best.dimension == 0 || dimension < best.dimension ||
-            (dimension == best.dimension && moduleSize > best.moduleSize)))) {
-        best.version = version;
-        best.dimension = dimension;
-        best.moduleSize = moduleSize;
-        best.left = left;
-        best.top = top;
-        best.score = score;
-      }
-    }
-  }
-}
-
-QRGrid findBestQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps) {
-  QRGrid best = {0, 0, 0, 0, 0, 0.0f};
-  int estimatedModuleSize = estimateModuleSize(image, width, height, comps);
-  if (estimatedModuleSize < 3) {
-    return best;
-  }
-
-  for (int moduleSize = std::max(3, estimatedModuleSize - 2);
-       moduleSize <= estimatedModuleSize + 2; moduleSize++) {
-    int contentDimension = estimateContentDimension(image, width, height, comps, moduleSize);
-    for (int version = 1; version <= 40; version++) {
-      int dimension = 17 + 4 * version;
-      if (contentDimension > 0 && std::abs(dimension - contentDimension) > 3) {
-        continue;
-      }
-      int qrSize = dimension * moduleSize;
-      if (qrSize > width || qrSize > height) {
-        continue;
-      }
-      if (width - qrSize > moduleSize * 24 || height - qrSize > moduleSize * 24) {
-        continue;
-      }
-
-      int step = std::max(1, moduleSize / 3);
-      QRGrid coarse = {0, 0, 0, 0, 0, 0.0f};
-      for (int top = 0; top <= height - qrSize; top += step) {
-        for (int left = 0; left <= width - qrSize; left += step) {
-          float score = scoreQRGrid(image, width, height, comps, version, left, top, moduleSize);
-          if (score > coarse.score) {
-            coarse.version = version;
-            coarse.dimension = dimension;
-            coarse.moduleSize = moduleSize;
-            coarse.left = left;
-            coarse.top = top;
-            coarse.score = score;
-          }
-        }
-      }
-      refineQRGrid(image, width, height, comps, version, moduleSize, coarse.left, coarse.top, step, best);
-    }
-  }
-  return best;
-}
-
-bool repairQRFixedPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
-  if (std::min(width, height) < 600 || std::min(width, height) > 1200) {
-    return false;
-  }
-
-  QRGrid grid = findBestQRGrid(image, width, height, comps);
-  if (grid.score < 0.55f) {
-    return false;
-  }
-  if (grid.version != 1) {
-    return false;
-  }
-
-  drawFinderPattern(image, width, height, comps,
-      grid.left, grid.top, grid.moduleSize);
-  drawFinderPattern(image, width, height, comps,
-      grid.left + (grid.dimension - 7) * grid.moduleSize, grid.top, grid.moduleSize);
-  drawFinderPattern(image, width, height, comps,
-      grid.left, grid.top + (grid.dimension - 7) * grid.moduleSize, grid.moduleSize);
-
-  for (int i = 8; i <= grid.dimension - 9; i++) {
-    unsigned char value = (i & 1) == 0 ? 0 : 255;
-    drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize, i, 6, value);
-    drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize, 6, i, value);
-  }
-
-  drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize, 8, grid.dimension - 8, 0);
-
-  if (grid.version > 1) {
-    zxing::qrcode::Version *qrVersion = zxing::qrcode::Version::getVersionForNumber(grid.version);
-    std::vector<int> &centers = qrVersion->getAlignmentPatternCenters();
-    for (size_t y = 0; y < centers.size(); y++) {
-      for (size_t x = 0; x < centers.size(); x++) {
-        bool nearTopLeft = x == 0 && y == 0;
-        bool nearTopRight = x == centers.size() - 1 && y == 0;
-        bool nearBottomLeft = x == 0 && y == centers.size() - 1;
-        if (nearTopLeft || nearTopRight || nearBottomLeft) {
-          continue;
-        }
-        int centerX = centers[x];
-        int centerY = centers[y];
-        for (int dy = -2; dy <= 2; dy++) {
-          for (int dx = -2; dx <= 2; dx++) {
-            bool isBlack = false;
-            alignmentModule(dx, dy, isBlack);
-            drawModule(image, width, height, comps, grid.left, grid.top, grid.moduleSize,
-                centerX + dx, centerY + dy, isBlack ? 0 : 255);
-          }
-        }
-      }
-    }
-  }
-
   return true;
 }
 
@@ -981,13 +767,9 @@ Ref<LuminanceSource> ImageReaderSource::create(string const& filename, bool repa
     // run unconditionally because it requires a high fixed-pattern score and a
     // module size consistent with the dominant black run length.
     if (!normalizeQRToModuleImage(image, width, height, comps)) {
-      // Fall back: rebuild specific finder patterns when the normalization is not
-      // confident enough.
-      if (!repairQRFixedPatterns(image, width, height, comps)) {
-        repairDamagedFinderPatterns(image, width, height, comps);
-      } else {
-        repairDamagedFinderPatterns(image, width, height, comps);
-      }
+      // Fall back: rebuild damaged finder remnants without assuming a specific
+      // QR version.
+      repairDamagedFinderPatterns(image, width, height, comps);
     }
   }
 
