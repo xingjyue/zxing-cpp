@@ -51,7 +51,10 @@ int BinaryBitmap::getHeight() const {
 Ref<LuminanceSource> BinaryBitmap::getLuminanceSource() const {
   return binarizer_->getLuminanceSource();
 }
-	
+
+Ref<Binarizer> BinaryBitmap::getBinarizer() const {
+  return binarizer_;
+}
 
 bool BinaryBitmap::isCropSupported() const {
   return getLuminanceSource()->isCropSupported();

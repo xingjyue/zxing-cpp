@@ -22,6 +22,7 @@
  */
 
 #include <zxing/Reader.h>
+#include <zxing/ReaderException.h>
 #include <zxing/qrcode/decoder/Decoder.h>
 #include <zxing/DecodeHints.h>
 
@@ -31,6 +32,10 @@ namespace qrcode {
 class QRCodeReader : public Reader {
  private:
   Decoder decoder_;
+
+  Ref<Result> decodeOnce(Ref<BinaryBitmap> image, DecodeHints hints);
+  Ref<Result> decodeNormalized(Ref<BinaryBitmap> image, DecodeHints hints,
+                               ReaderException const& primary);
 			
  protected:
   Decoder& getDecoder();

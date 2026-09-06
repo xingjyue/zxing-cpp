@@ -207,6 +207,8 @@ set(LIBZXING_FILES
     core/src/zxing/qrcode/FormatInformation.h
     core/src/zxing/qrcode/QRCodeReader.cpp
     core/src/zxing/qrcode/QRCodeReader.h
+    core/src/zxing/qrcode/QRGridNormalizer.cpp
+    core/src/zxing/qrcode/QRGridNormalizer.h
     core/src/zxing/qrcode/Version.cpp
     core/src/zxing/qrcode/Version.h
     core/src/zxing/Reader.cpp

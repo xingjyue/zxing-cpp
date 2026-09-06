@@ -39,6 +39,7 @@ namespace zxing {
 		Ref<BitMatrix> getBlackMatrix();
 		
 		Ref<LuminanceSource> getLuminanceSource() const;
+		Ref<Binarizer> getBinarizer() const;
 
 		int getWidth() const;
 		int getHeight() const;

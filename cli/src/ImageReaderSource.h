@@ -19,6 +19,8 @@
 
 #include <zxing/LuminanceSource.h>
 
+#include <vector>
+
 class ImageReaderSource : public zxing::LuminanceSource {
 private:
   typedef LuminanceSource Super;
@@ -30,10 +32,20 @@ private:
 
 public:
   static zxing::Ref<LuminanceSource> create(std::string const& filename);
-  static zxing::Ref<LuminanceSource> create(std::string const& filename, bool repairFixedPatterns);
+  static zxing::Ref<LuminanceSource> create(
+      std::string const& filename, bool repairFixedPatterns);
+  static zxing::Ref<ImageReaderSource> createLoaded(
+      std::string const& filename);
+  static std::vector<zxing::Ref<LuminanceSource> >
+  createNormalizedCandidates(
+      std::string const& filename, int maximumCandidates);
+  static zxing::Ref<LuminanceSource> createNormalized(
+      std::string const& filename, bool& normalized);
 
   ImageReaderSource(zxing::ArrayRef<char> image, int width, int height, int comps);
 
+  std::vector<zxing::Ref<LuminanceSource> >
+  createNormalizedCandidates(int maximumCandidates) const;
   zxing::ArrayRef<char> getRow(int y, zxing::ArrayRef<char> row) const;
   zxing::ArrayRef<char> getMatrix() const;
 };

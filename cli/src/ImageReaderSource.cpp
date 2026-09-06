@@ -15,697 +15,140 @@
  */
 
 #include "ImageReaderSource.h"
-#include <zxing/common/IllegalArgumentException.h>
-#include <zxing/qrcode/Version.h>
-#include <iostream>
-#include <sstream>
-#include <cstdlib>
-#include <algorithm>
-#include <vector>
-#include "lodepng.h"
-#include "jpgd.h"
 
-using std::string;
+#include <zxing/common/IllegalArgumentException.h>
+#include <zxing/qrcode/QRGridNormalizer.h>
+
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
+#include <limits>
+#include <memory>
+#include <new>
+#include <sstream>
+#include <vector>
+
+#include "jpgd.h"
+#include "lodepng.h"
+
 using std::ostringstream;
-using zxing::Ref;
+using std::string;
 using zxing::ArrayRef;
 using zxing::LuminanceSource;
+using zxing::Ref;
 
 namespace {
 
-struct Component {
-  int left;
-  int top;
-  int right;
-  int bottom;
-  int area;
+struct LoadedImage {
+  ArrayRef<char> pixels;
+  int width;
+  int height;
+  int components;
 };
 
-inline unsigned char luminanceAt(zxing::ArrayRef<char> const& image, int width, int comps, int x, int y) {
-  unsigned char const* pixel = reinterpret_cast<unsigned char const*>(&image[(y * width + x) * comps]);
-  if (comps == 1 || comps == 2) {
-    return pixel[0];
+struct FreeBuffer {
+  void operator()(unsigned char* buffer) const {
+    std::free(buffer);
   }
-  return (unsigned char)((306 * (int)pixel[0] + 601 * (int)pixel[1] +
-      117 * (int)pixel[2] + 0x200) >> 10);
+};
+
+void ThrowLoadError(const string& filename) {
+  ostringstream message;
+  message << "Loading \"" << filename << "\" failed.";
+  throw zxing::IllegalArgumentException(message.str().c_str());
 }
 
-inline void setPixel(zxing::ArrayRef<char>& image, int width, int comps, int x, int y, unsigned char value) {
-  unsigned char* pixel = reinterpret_cast<unsigned char*>(&image[(y * width + x) * comps]);
-  for (int c = 0; c < comps && c < 3; c++) {
-    pixel[c] = value;
-  }
-  if (comps == 2) {
-    pixel[1] = 255;
-  } else if (comps == 4) {
-    pixel[3] = 255;
-  }
-}
-
-float blackFraction(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                    int left, int top, int regionWidth, int regionHeight) {
-  if (left < 0 || top < 0 || left + regionWidth > width || top + regionHeight > height ||
-      regionWidth <= 0 || regionHeight <= 0) {
-    return 0.0f;
-  }
-
-  int black = 0;
-  int total = regionWidth * regionHeight;
-  for (int y = top; y < top + regionHeight; y++) {
-    for (int x = left; x < left + regionWidth; x++) {
-      if (luminanceAt(image, width, comps, x, y) < 80) {
-        black++;
-      }
-    }
-  }
-  return (float)black / (float)total;
-}
-
-void drawFinderPattern(zxing::ArrayRef<char>& image, int width, int height, int comps,
-                       int left, int top, int moduleSize) {
-  int size = moduleSize * 7;
-  if (left < 0 || top < 0 || left + size > width || top + size > height) {
-    return;
-  }
-
-  for (int y = top; y < top + size; y++) {
-    for (int x = left; x < left + size; x++) {
-      setPixel(image, width, comps, x, y, 0);
-    }
-  }
-  for (int y = top + moduleSize; y < top + moduleSize * 6; y++) {
-    for (int x = left + moduleSize; x < left + moduleSize * 6; x++) {
-      setPixel(image, width, comps, x, y, 255);
-    }
-  }
-  for (int y = top + moduleSize * 2; y < top + moduleSize * 5; y++) {
-    for (int x = left + moduleSize * 2; x < left + moduleSize * 5; x++) {
-      setPixel(image, width, comps, x, y, 0);
-    }
-  }
-}
-
-bool finderModule(int localX, int localY, bool& isBlack) {
-  if (localX >= 0 && localX < 7 && localY >= 0 && localY < 7) {
-    isBlack = localX == 0 || localX == 6 || localY == 0 || localY == 6 ||
-        (localX >= 2 && localX <= 4 && localY >= 2 && localY <= 4);
-    return true;
-  }
-  return false;
-}
-
-bool alignmentModule(int localX, int localY, bool& isBlack) {
-  if (localX >= -2 && localX <= 2 && localY >= -2 && localY <= 2) {
-    int x = localX + 2;
-    int y = localY + 2;
-    isBlack = x == 0 || x == 4 || y == 0 || y == 4 || (x == 2 && y == 2);
-    return true;
-  }
-  return false;
-}
-
-bool fixedModuleForVersion(int version, int moduleX, int moduleY, bool& isBlack) {
-  int dimension = 17 + 4 * version;
-  const int finderLeft[3] = {0, dimension - 7, 0};
-  const int finderTop[3] = {0, 0, dimension - 7};
-  for (int i = 0; i < 3; i++) {
-    if (finderModule(moduleX - finderLeft[i], moduleY - finderTop[i], isBlack)) {
-      return true;
-    }
-  }
-
-  if (moduleY == 6 && moduleX >= 8 && moduleX <= dimension - 9) {
-    isBlack = (moduleX & 1) == 0;
-    return true;
-  }
-  if (moduleX == 6 && moduleY >= 8 && moduleY <= dimension - 9) {
-    isBlack = (moduleY & 1) == 0;
-    return true;
-  }
-
-  if (moduleX == 8 && moduleY == dimension - 8) {
-    isBlack = true;
-    return true;
-  }
-
-  if (version > 1) {
-    zxing::qrcode::Version *qrVersion = zxing::qrcode::Version::getVersionForNumber(version);
-    std::vector<int> &centers = qrVersion->getAlignmentPatternCenters();
-    for (size_t y = 0; y < centers.size(); y++) {
-      for (size_t x = 0; x < centers.size(); x++) {
-        bool nearTopLeft = x == 0 && y == 0;
-        bool nearTopRight = x == centers.size() - 1 && y == 0;
-        bool nearBottomLeft = x == 0 && y == centers.size() - 1;
-        if (nearTopLeft || nearTopRight || nearBottomLeft) {
-          continue;
-        }
-        if (alignmentModule(moduleX - centers[x], moduleY - centers[y], isBlack)) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
-int estimateModuleSize(zxing::ArrayRef<char> const& image, int width, int height, int comps) {
-  int maxLength = std::max(width, height);
-  std::vector<int> histogram(maxLength + 1, 0);
-  // Use a small floor so that single-module runs of dense (high-version) QR
-  // codes are not filtered out. The previous floor of std::min(w,h)/80 ruled
-  // out runs shorter than ~13 px on 1080-pixel images, while the actual
-  // module width for QR v35-v40 is only ~6 px. As a result the histogram
-  // peak landed on 2- or 3-module clusters and the version filter rejected
-  // the true high versions.
-  int minRun = std::max(2, std::min(width, height) / 400);
-  int maxRun = std::max(minRun, std::min(width, height) / 3);
-
-  for (int y = 5; y < height - 5; y++) {
-    for (int x = 0; x < width; ) {
-      while (x < width && luminanceAt(image, width, comps, x, y) >= 80) {
-        x++;
-      }
-      int start = x;
-      while (x < width && luminanceAt(image, width, comps, x, y) < 80) {
-        x++;
-      }
-      int run = x - start;
-      if (run >= minRun && run <= maxRun) {
-        histogram[run]++;
-      }
-    }
-  }
-
-  for (int x = 5; x < width - 5; x++) {
-    for (int y = 0; y < height; ) {
-      while (y < height && luminanceAt(image, width, comps, x, y) >= 80) {
-        y++;
-      }
-      int start = y;
-      while (y < height && luminanceAt(image, width, comps, x, y) < 80) {
-        y++;
-      }
-      int run = y - start;
-      if (run >= minRun && run <= maxRun) {
-        histogram[run]++;
-      }
-    }
-  }
-
-  int bestRun = 0;
-  int bestCount = 0;
-  for (size_t i = 0; i < histogram.size(); i++) {
-    if ((int)histogram[i] > bestCount) {
-      bestRun = (int)i;
-      bestCount = (int)histogram[i];
-    }
-  }
-  if (bestCount == 0) {
+int CheckedPixelBytes(size_t width, size_t height) {
+  if (width == 0 || height == 0) {
     return 0;
   }
-
-  // Alignment patterns and adjacent same-color modules bias the peak toward
-  // small integer multiples of the true module size. Walk up from the
-  // smallest captured run and return the first bin that is itself a strong
-  // peak (>= 1/3 of the absolute peak and not just the leading edge of a
-  // smooth ramp). This recovers the fundamental module size on dense codes
-  // without affecting low-version codes whose modules already sit at the
-  // dominant peak.
-  int significantThreshold = std::max(2, bestCount / 3);
-  for (int i = minRun; i <= bestRun; i++) {
-    if (histogram[i] >= significantThreshold &&
-        (i == minRun || histogram[i] >= histogram[i - 1])) {
-      return i;
-    }
+  size_t maxInt = static_cast<size_t>(std::numeric_limits<int>::max());
+  size_t maxSize = std::numeric_limits<size_t>::max();
+  if (width > maxInt || height > maxInt || height > maxSize / width) {
+    throw zxing::IllegalArgumentException("Image dimensions are too large.");
   }
-  return bestRun;
+  size_t pixelCount = width * height;
+  if (pixelCount > maxInt / 4) {
+    throw zxing::IllegalArgumentException("Image dimensions are too large.");
+  }
+  return static_cast<int>(pixelCount * 4);
 }
 
-bool findContentBounds(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                       int& left, int& top, int& size) {
-  int minX = width;
-  int minY = height;
-  int maxX = -1;
-  int maxY = -1;
-  int border = 5;
-  for (int y = border; y < height - border; y++) {
-    for (int x = border; x < width - border; x++) {
-      if (luminanceAt(image, width, comps, x, y) < 80) {
-        minX = std::min(minX, x);
-        minY = std::min(minY, y);
-        maxX = std::max(maxX, x);
-        maxY = std::max(maxY, y);
-      }
+LoadedImage LoadImage(const string& filename) {
+  LoadedImage loaded = {ArrayRef<char>(), 0, 0, 4};
+  string extension = filename.substr(filename.find_last_of(".") + 1);
+  std::transform(extension.begin(), extension.end(), extension.begin(),
+      [](char value) {
+        return static_cast<char>(
+            std::tolower(static_cast<unsigned char>(value)));
+      });
+
+  if (extension == "png") {
+    std::vector<unsigned char> decoded;
+    unsigned width = 0;
+    unsigned height = 0;
+    unsigned error = lodepng::decode(decoded, width, height, filename);
+    if (error) {
+      ostringstream message;
+      message << "Error while loading '" << lodepng_error_text(error) << "'";
+      throw zxing::IllegalArgumentException(message.str().c_str());
+    }
+    int byteCount = CheckedPixelBytes(width, height);
+    loaded.width = static_cast<int>(width);
+    loaded.height = static_cast<int>(height);
+    if (byteCount > 0 && decoded.size() == static_cast<size_t>(byteCount)) {
+      loaded.pixels = ArrayRef<char>(byteCount);
+      std::memcpy(&loaded.pixels[0], &decoded[0], byteCount);
+    }
+  } else if (extension == "jpg" || extension == "jpeg") {
+    int actualComponents = 0;
+    std::unique_ptr<unsigned char, FreeBuffer> buffer(
+        jpgd::decompress_jpeg_image_from_file(
+            filename.c_str(), &loaded.width, &loaded.height,
+            &actualComponents, 4));
+    int byteCount = loaded.width > 0 && loaded.height > 0 ?
+        CheckedPixelBytes(
+            static_cast<size_t>(loaded.width),
+            static_cast<size_t>(loaded.height)) : 0;
+    if (buffer && byteCount > 0) {
+      loaded.pixels = ArrayRef<char>(
+          reinterpret_cast<char*>(buffer.get()), byteCount);
     }
   }
-  if (maxX < minX || maxY < minY) {
-    return false;
-  }
 
-  left = minX;
-  top = minY;
-  size = std::max(maxX - minX + 1, maxY - minY + 1);
-  return true;
+  if (!loaded.pixels) {
+    ThrowLoadError(filename);
+  }
+  return loaded;
 }
 
-struct FixedModuleEntry {
-  int x;
-  int y;
-  bool isBlack;
-};
-
-void buildFixedModules(int version, std::vector<FixedModuleEntry>& out) {
-  int dimension = 17 + 4 * version;
-  out.clear();
-  out.reserve(256);
-  for (int moduleY = 0; moduleY < dimension; moduleY++) {
-    for (int moduleX = 0; moduleX < dimension; moduleX++) {
-      bool isBlack = false;
-      if (fixedModuleForVersion(version, moduleX, moduleY, isBlack)) {
-        FixedModuleEntry entry = {moduleX, moduleY, isBlack};
-        out.push_back(entry);
-      }
-    }
-  }
+Ref<ImageReaderSource> MakeImageSource(const LoadedImage& loaded) {
+  return Ref<ImageReaderSource>(new ImageReaderSource(
+      loaded.pixels, loaded.width, loaded.height, loaded.components));
 }
 
-float moduleBlackFraction(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                          int gridLeft, int gridTop, float moduleSize, int moduleX, int moduleY) {
-  int left = gridLeft + (int)(moduleX * moduleSize + moduleSize * 0.2f + 0.5f);
-  int top = gridTop + (int)(moduleY * moduleSize + moduleSize * 0.2f + 0.5f);
-  int right = gridLeft + (int)((moduleX + 1) * moduleSize - moduleSize * 0.2f + 0.5f);
-  int bottom = gridTop + (int)((moduleY + 1) * moduleSize - moduleSize * 0.2f + 0.5f);
-  left = std::max(0, std::min(width, left));
-  right = std::max(0, std::min(width, right));
-  top = std::max(0, std::min(height, top));
-  bottom = std::max(0, std::min(height, bottom));
-  if (left >= right || top >= bottom) {
-    return -1.0f;
-  }
-
-  int black = 0;
-  int total = 0;
-  for (int y = top; y < bottom; y++) {
-    for (int x = left; x < right; x++) {
-      if (luminanceAt(image, width, comps, x, y) < 80) {
-        black++;
-      }
-      total++;
-    }
-  }
-  return total == 0 ? -1.0f : (float)black / (float)total;
+Ref<LuminanceSource> MakeSource(const LoadedImage& loaded) {
+  return MakeImageSource(loaded);
 }
 
-float scoreCachedQRGrid(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                        std::vector<FixedModuleEntry> const& fixedModules,
-                        int gridLeft, int gridTop, float moduleSize) {
-  int matches = 0;
-  int total = 0;
-  for (size_t i = 0; i < fixedModules.size(); i++) {
-    FixedModuleEntry const& entry = fixedModules[i];
-    float black = moduleBlackFraction(image, width, height, comps, gridLeft, gridTop,
-        moduleSize, entry.x, entry.y);
-    if (black < 0.0f) {
-      continue;
-    }
-    bool actualBlack = black > 0.5f;
-    if (actualBlack == entry.isBlack) {
-      matches++;
-    }
-    total++;
+std::vector<Ref<LuminanceSource> > MakeNormalizedSources(
+    const std::vector<zxing::qrcode::NormalizedImage>& normalized) {
+  std::vector<Ref<LuminanceSource> > result;
+  result.reserve(normalized.size());
+  for (size_t i = 0; i < normalized.size(); ++i) {
+    const LoadedImage candidate = {
+        normalized[i].pixels, normalized[i].width,
+        normalized[i].height, normalized[i].components};
+    result.push_back(MakeSource(candidate));
   }
-  return total == 0 ? 0.0f : (float)matches / (float)total;
-}
-
-bool normalizeQRToModuleImage(zxing::ArrayRef<char>& image, int& width, int& height, int& comps) {
-  int bboxLeft = 0;
-  int bboxTop = 0;
-  int bboxSize = 0;
-  if (!findContentBounds(image, width, height, comps, bboxLeft, bboxTop, bboxSize)) {
-    return false;
-  }
-
-  int estimatedModuleSize = estimateModuleSize(image, width, height, comps);
-  if (estimatedModuleSize < 2) {
-    return false;
-  }
-
-  int bestVersion = 0;
-  int bestLeft = bboxLeft;
-  int bestTop = bboxTop;
-  float bestModuleSize = 0.0f;
-  float bestScore = 0.0f;
-
-  std::vector<FixedModuleEntry> fixedModules;
-  for (int version = 1; version <= 40; version++) {
-    int dimension = 17 + 4 * version;
-    float baseModuleSize = (float)bboxSize / (float)dimension;
-    if (baseModuleSize < 2.0f) {
-      continue;
-    }
-
-    // Histogram-based module estimates are useful on clean synthetic images,
-    // but photographed print texture can create many tiny dark runs and push
-    // the estimate down to 2-3 pixels. In that case, keep the version in the
-    // search and let the fixed-pattern score decide.
-    if (estimatedModuleSize >= 4) {
-      float moduleTolerance = std::max(2.0f, (float)estimatedModuleSize * 0.5f);
-      if (std::abs(baseModuleSize - (float)estimatedModuleSize) > moduleTolerance) {
-        continue;
-      }
-    }
-
-    buildFixedModules(version, fixedModules);
-    // Multi-anchor prescore. Sampling a single point at the bbox origin
-    // is unreliable when finder patterns are damaged (bbox can shift by a
-    // few modules). Probe a small grid of offsets around the bbox corner
-    // and use the best score as the gate; this preserves performance for
-    // the typical case while not killing recovery on partially damaged
-    // codes whose true grid origin is offset from the bbox.
-    float anchorPrescore = 0.0f;
-    int anchorStep = std::max(1, (int)(baseModuleSize + 0.5f));
-    for (int dy = -2; dy <= 2 && anchorPrescore < 0.85f; dy++) {
-      for (int dx = -2; dx <= 2 && anchorPrescore < 0.85f; dx++) {
-        int ax = bboxLeft + dx * anchorStep;
-        int ay = bboxTop + dy * anchorStep;
-        float s = scoreCachedQRGrid(image, width, height, comps, fixedModules,
-            ax, ay, baseModuleSize);
-        if (s > anchorPrescore) {
-          anchorPrescore = s;
-        }
-      }
-    }
-    if (anchorPrescore < 0.45f && anchorPrescore < bestScore - 0.05f) {
-      continue;
-    }
-
-    float candidateModuleSizes[3] = {baseModuleSize, baseModuleSize + 0.5f, baseModuleSize - 0.5f};
-    for (int i = 0; i < 3; i++) {
-      float moduleSize = candidateModuleSizes[i];
-      if (moduleSize < 2.0f) {
-        continue;
-      }
-
-      int qrSize = (int)(moduleSize * dimension + 0.5f);
-      if (qrSize > std::min(width, height)) {
-        continue;
-      }
-
-      int searchRadius = std::max(2, (int)(3.0f * moduleSize));
-      int step = std::max(1, (int)(moduleSize / 3.0f));
-      int leftStart = std::max(0, bboxLeft - searchRadius);
-      int leftEnd = std::min(width - qrSize, bboxLeft + searchRadius);
-      int topStart = std::max(0, bboxTop - searchRadius);
-      int topEnd = std::min(height - qrSize, bboxTop + searchRadius);
-
-      for (int top = topStart; top <= topEnd; top += step) {
-        for (int left = leftStart; left <= leftEnd; left += step) {
-          float score = scoreCachedQRGrid(image, width, height, comps, fixedModules, left, top, moduleSize);
-          if (score > bestScore) {
-            bestScore = score;
-            bestVersion = version;
-            bestLeft = left;
-            bestTop = top;
-            bestModuleSize = moduleSize;
-          }
-        }
-      }
-    }
-  }
-
-  if (bestVersion == 0 || bestScore < 0.55f) {
-    return false;
-  }
-
-  int dimension = 17 + 4 * bestVersion;
-  float moduleSize = bestModuleSize;
-  int gridLeft = bestLeft;
-  int gridTop = bestTop;
-  const int scale = 8;
-  const int quietZone = 4;
-  int normalizedWidth = (dimension + quietZone * 2) * scale;
-  int normalizedHeight = normalizedWidth;
-  zxing::ArrayRef<char> normalized(4 * normalizedWidth * normalizedHeight);
-  for (int y = 0; y < normalizedHeight; y++) {
-    for (int x = 0; x < normalizedWidth; x++) {
-      setPixel(normalized, normalizedWidth, 4, x, y, 255);
-    }
-  }
-
-  for (int moduleY = 0; moduleY < dimension; moduleY++) {
-    for (int moduleX = 0; moduleX < dimension; moduleX++) {
-      bool fixedBlack = false;
-      bool hasFixedValue = fixedModuleForVersion(bestVersion, moduleX, moduleY, fixedBlack);
-      float black = moduleBlackFraction(image, width, height, comps, gridLeft, gridTop,
-          moduleSize, moduleX, moduleY);
-      bool isBlack = hasFixedValue ? fixedBlack :
-          (black > 0.5f);
-      if (!isBlack) {
-        continue;
-      }
-
-      int outLeft = (moduleX + quietZone) * scale;
-      int outTop = (moduleY + quietZone) * scale;
-      for (int y = outTop; y < outTop + scale; y++) {
-        for (int x = outLeft; x < outLeft + scale; x++) {
-          setPixel(normalized, normalizedWidth, 4, x, y, 0);
-        }
-      }
-    }
-  }
-
-  image = normalized;
-  width = normalizedWidth;
-  height = normalizedHeight;
-  comps = 4;
-  return true;
-}
-
-float scoreFinderCandidate(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                           int left, int top, int moduleSize) {
-  if (left < 0 || top < 0 || left + 7 * moduleSize > width || top + 7 * moduleSize > height) {
-    return 0.0f;
-  }
-
-  int matches = 0;
-  int total = 0;
-  for (int moduleY = 0; moduleY < 7; moduleY++) {
-    for (int moduleX = 0; moduleX < 7; moduleX++) {
-      bool expectedBlack = false;
-      finderModule(moduleX, moduleY, expectedBlack);
-      int sampleX = left + moduleX * moduleSize + moduleSize / 2;
-      int sampleY = top + moduleY * moduleSize + moduleSize / 2;
-      bool actualBlack = luminanceAt(image, width, comps, sampleX, sampleY) < 80;
-      if (actualBlack == expectedBlack) {
-        matches++;
-      }
-      total++;
-    }
-  }
-  return (float)matches / (float)total;
-}
-
-bool tryRepairFinderCandidate(zxing::ArrayRef<char>& image, int width, int height, int comps,
-                              int left, int top, int moduleSize) {
-  if (scoreFinderCandidate(image, width, height, comps, left, top, moduleSize) > 0.62f) {
-    drawFinderPattern(image, width, height, comps, left, top, moduleSize);
-    return true;
-  }
-  return false;
-}
-
-bool isLeftDamagedFinder(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                         Component const& component, int& moduleSize) {
-  int w = component.right - component.left + 1;
-  int h = component.bottom - component.top + 1;
-  if (w < 30 || h < 40 || h > height / 2) {
-    return false;
-  }
-
-  moduleSize = h / 7;
-  if (moduleSize < 3) {
-    return false;
-  }
-
-  int tolerance = std::max(3, moduleSize / 2);
-  if (std::abs(h - 7 * moduleSize) > tolerance || std::abs(w - 6 * moduleSize) > tolerance) {
-    return false;
-  }
-  if (component.left - moduleSize < 0 || component.top + 7 * moduleSize > height ||
-      component.left + 6 * moduleSize > width) {
-    return false;
-  }
-
-  return blackFraction(image, width, height, comps,
-             component.left, component.top, 6 * moduleSize, moduleSize) > 0.65f &&
-         blackFraction(image, width, height, comps,
-             component.left + 5 * moduleSize, component.top, moduleSize, 7 * moduleSize) > 0.65f &&
-         blackFraction(image, width, height, comps,
-             component.left, component.top + 6 * moduleSize, 6 * moduleSize, moduleSize) > 0.65f &&
-         blackFraction(image, width, height, comps,
-             component.left + moduleSize, component.top + 2 * moduleSize, 3 * moduleSize, 3 * moduleSize) > 0.65f;
-}
-
-bool isRightDamagedFinder(zxing::ArrayRef<char> const& image, int width, int height, int comps,
-                          Component const& component, int& moduleSize) {
-  int w = component.right - component.left + 1;
-  int h = component.bottom - component.top + 1;
-  if (w < 30 || h < 40 || h > height / 2) {
-    return false;
-  }
-
-  moduleSize = h / 7;
-  if (moduleSize < 3) {
-    return false;
-  }
-
-  int tolerance = std::max(3, moduleSize / 2);
-  if (std::abs(h - 7 * moduleSize) > tolerance || w < 4 * moduleSize || w > 7 * moduleSize) {
-    return false;
-  }
-  if (component.left + 7 * moduleSize > width || component.top + 7 * moduleSize > height) {
-    return false;
-  }
-
-  return blackFraction(image, width, height, comps,
-             component.left, component.top, std::min(w, 6 * moduleSize), moduleSize) > 0.65f &&
-         blackFraction(image, width, height, comps,
-             component.left, component.top, moduleSize, 7 * moduleSize) > 0.65f &&
-         blackFraction(image, width, height, comps,
-             component.left, component.top + 6 * moduleSize, std::min(w, 6 * moduleSize), moduleSize) > 0.65f &&
-         blackFraction(image, width, height, comps,
-             component.left + 2 * moduleSize, component.top + 2 * moduleSize, 3 * moduleSize, 3 * moduleSize) > 0.65f;
-}
-
-bool repairDamagedFinderPatterns(zxing::ArrayRef<char>& image, int width, int height, int comps) {
-  std::vector<unsigned char> visited(width * height, 0);
-  std::vector<int> stack;
-  bool repairedSpecificFinder = false;
-  bool repairedAnyFinder = false;
-
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
-      int start = y * width + x;
-      if (visited[start] || luminanceAt(image, width, comps, x, y) >= 80) {
-        continue;
-      }
-
-      Component component = {x, y, x, y, 0};
-      visited[start] = 1;
-      stack.clear();
-      stack.push_back(start);
-
-      while (!stack.empty()) {
-        int p = stack.back();
-        stack.pop_back();
-        int px = p % width;
-        int py = p / width;
-        component.area++;
-        component.left = std::min(component.left, px);
-        component.top = std::min(component.top, py);
-        component.right = std::max(component.right, px);
-        component.bottom = std::max(component.bottom, py);
-
-        const int dx[4] = {-1, 1, 0, 0};
-        const int dy[4] = {0, 0, -1, 1};
-        for (int i = 0; i < 4; i++) {
-          int nx = px + dx[i];
-          int ny = py + dy[i];
-          if (nx < 0 || ny < 0 || nx >= width || ny >= height) {
-            continue;
-          }
-          int n = ny * width + nx;
-          if (!visited[n] && luminanceAt(image, width, comps, nx, ny) < 80) {
-            visited[n] = 1;
-            stack.push_back(n);
-          }
-        }
-      }
-
-      int componentWidth = component.right - component.left + 1;
-      int componentHeight = component.bottom - component.top + 1;
-      int minFinderComponentSize = std::max(30, std::min(width, height) / 14);
-      if (componentWidth < minFinderComponentSize || componentHeight < minFinderComponentSize ||
-          componentWidth > width / 2 || componentHeight > height / 2) {
-        continue;
-      }
-      float aspect = (float)componentWidth / (float)componentHeight;
-      if (aspect < 0.70f || aspect > 1.45f) {
-        continue;
-      }
-
-      int leftDamagedModuleSize = 0;
-      if (isLeftDamagedFinder(image, width, height, comps, component, leftDamagedModuleSize)) {
-        drawFinderPattern(image, width, height, comps,
-            component.left - leftDamagedModuleSize, component.top, leftDamagedModuleSize);
-        repairedSpecificFinder = true;
-        repairedAnyFinder = true;
-        continue;
-      }
-      int rightDamagedModuleSize = 0;
-      if (isRightDamagedFinder(image, width, height, comps, component, rightDamagedModuleSize)) {
-        float rightScore = scoreFinderCandidate(image, width, height, comps,
-            component.left, component.top, rightDamagedModuleSize);
-        float leftScore = scoreFinderCandidate(image, width, height, comps,
-            component.left - rightDamagedModuleSize, component.top, rightDamagedModuleSize);
-        if (rightScore >= leftScore) {
-          drawFinderPattern(image, width, height, comps,
-              component.left, component.top, rightDamagedModuleSize);
-          repairedSpecificFinder = true;
-          repairedAnyFinder = true;
-          continue;
-        }
-      }
-      if (repairedSpecificFinder) {
-        continue;
-      }
-      if (std::min(width, height) < 600) {
-        continue;
-      }
-
-      int estimatedModuleSize = (std::max(componentWidth, componentHeight) + 3) / 7;
-      for (int moduleSize = std::max(3, estimatedModuleSize - 2);
-           moduleSize <= estimatedModuleSize + 2; moduleSize++) {
-        int finderSize = 7 * moduleSize;
-        if (finderSize < componentWidth || finderSize < componentHeight) {
-          continue;
-        }
-        int missingWidth = finderSize - componentWidth;
-        int missingHeight = finderSize - componentHeight;
-        if (missingWidth > 2 * moduleSize || missingHeight > 2 * moduleSize) {
-          continue;
-        }
-
-        int candidateLefts[3] = {
-          component.left,
-          component.right - finderSize + 1,
-          component.left - missingWidth / 2
-        };
-        int candidateTops[3] = {
-          component.top,
-          component.bottom - finderSize + 1,
-          component.top - missingHeight / 2
-        };
-
-        for (int y = 0; y < 3; y++) {
-          for (int x = 0; x < 3; x++) {
-            if (tryRepairFinderCandidate(image, width, height, comps,
-                candidateLefts[x], candidateTops[y], moduleSize)) {
-              repairedAnyFinder = true;
-            }
-          }
-        }
-      }
-    }
-  }
-  return repairedAnyFinder;
+  return result;
 }
 
 }
 
 inline char ImageReaderSource::convertPixel(char const* pixel_) const {
-  unsigned char const* pixel = (unsigned char const*)pixel_;
+  unsigned char const* pixel = reinterpret_cast<unsigned char const*>(pixel_);
   if (comps == 1 || comps == 2) {
     // Gray or gray+alpha
     return pixel[0];
@@ -713,90 +156,91 @@ inline char ImageReaderSource::convertPixel(char const* pixel_) const {
     // Red, Green, Blue, (Alpha)
     // We assume 16 bit values here
     // 0x200 = 1<<9, half an lsb of the result to force rounding
-    return (char)((306 * (int)pixel[0] + 601 * (int)pixel[1] +
-        117 * (int)pixel[2] + 0x200) >> 10);
-  } else {
-    throw zxing::IllegalArgumentException("Unexpected image depth");
+    return static_cast<char>((306 * static_cast<int>(pixel[0]) +
+        601 * static_cast<int>(pixel[1]) + 117 * static_cast<int>(pixel[2]) +
+        0x200) >> 10);
   }
+  throw zxing::IllegalArgumentException("Unexpected image depth");
 }
 
-ImageReaderSource::ImageReaderSource(ArrayRef<char> image_, int width, int height, int comps_)
+ImageReaderSource::ImageReaderSource(
+    ArrayRef<char> image_, int width, int height, int comps_)
     : Super(width, height), image(image_), comps(comps_) {}
 
-Ref<LuminanceSource> ImageReaderSource::create(string const& filename) {
-  return create(filename, false);
+Ref<LuminanceSource> ImageReaderSource::create(const string& filename) {
+  return createLoaded(filename);
 }
 
-Ref<LuminanceSource> ImageReaderSource::create(string const& filename, bool repairFixedPatterns) {
-  string extension = filename.substr(filename.find_last_of(".") + 1);
-  std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
-  int width, height;
-  int comps = 0;
-  zxing::ArrayRef<char> image;
-  if (extension == "png") {
-    std::vector<unsigned char> out;
-
-    { unsigned w, h;
-      unsigned error = lodepng::decode(out, w, h, filename);
-      if (error) {
-        ostringstream msg;
-        msg << "Error while loading '" << lodepng_error_text(error) << "'";
-        throw zxing::IllegalArgumentException(msg.str().c_str());
-      }
-      width = w;
-      height = h;
-    }
-
-    comps = 4;
-    image = zxing::ArrayRef<char>(4 * width * height);
-    memcpy(&image[0], &out[0], image->size());
-  } else if (extension == "jpg" || extension == "jpeg") {
-    char *buffer = reinterpret_cast<char*>(jpgd::decompress_jpeg_image_from_file(
-        filename.c_str(), &width, &height, &comps, 4));
-    image = zxing::ArrayRef<char>(buffer, 4 * width * height);
-    free(buffer);
+Ref<LuminanceSource> ImageReaderSource::create(
+    const string& filename, bool repairFixedPatterns) {
+  if (!repairFixedPatterns) {
+    return create(filename);
   }
-  if (!image) {
-    ostringstream msg;
-    msg << "Loading \"" << filename << "\" failed.";
-    throw zxing::IllegalArgumentException(msg.str().c_str());
-  }
-
-  if (repairFixedPatterns) {
-    // Try the version-aware grid normalization first; it is now safe enough to
-    // run unconditionally because it requires a high fixed-pattern score and a
-    // module size consistent with the dominant black run length.
-    if (!normalizeQRToModuleImage(image, width, height, comps)) {
-      // Fall back: rebuild damaged finder remnants without assuming a specific
-      // QR version.
-      repairDamagedFinderPatterns(image, width, height, comps);
-    }
-  }
-
-  return Ref<LuminanceSource>(new ImageReaderSource(image, width, height, comps));
+  bool normalized = false;
+  return createNormalized(filename, normalized);
 }
 
-zxing::ArrayRef<char> ImageReaderSource::getRow(int y, zxing::ArrayRef<char> row) const {
-  const char* pixelRow = &image[0] + y * getWidth() * 4;
+Ref<ImageReaderSource> ImageReaderSource::createLoaded(
+    const string& filename) {
+  return MakeImageSource(LoadImage(filename));
+}
+
+std::vector<Ref<LuminanceSource> >
+ImageReaderSource::createNormalizedCandidates(
+    const string& filename, int maximumCandidates) {
+  if (maximumCandidates <= 0) {
+    return std::vector<Ref<LuminanceSource> >();
+  }
+  return createLoaded(filename)->createNormalizedCandidates(maximumCandidates);
+}
+
+Ref<LuminanceSource> ImageReaderSource::createNormalized(
+    const string& filename, bool& normalized) {
+  const Ref<ImageReaderSource> loaded = createLoaded(filename);
+  const std::vector<Ref<LuminanceSource> > candidates =
+      loaded->createNormalizedCandidates(1);
+  normalized = !candidates.empty();
+  if (normalized) {
+    return candidates[0];
+  }
+  return loaded;
+}
+
+std::vector<Ref<LuminanceSource> >
+ImageReaderSource::createNormalizedCandidates(int maximumCandidates) const {
+  if (maximumCandidates <= 0) {
+    return std::vector<Ref<LuminanceSource> >();
+  }
+  const zxing::qrcode::MutableImage source = {
+      image, getWidth(), getHeight(), comps};
+  try {
+    return MakeNormalizedSources(
+        zxing::qrcode::NormalizeQR(source, std::min(3, maximumCandidates)));
+  } catch (const std::bad_alloc&) {
+    return std::vector<Ref<LuminanceSource> >();
+  }
+}
+
+ArrayRef<char> ImageReaderSource::getRow(int y, ArrayRef<char> row) const {
+  const char* pixelRow = &image[0] + y * getWidth() * comps;
   if (!row) {
-    row = zxing::ArrayRef<char>(getWidth());
+    row = ArrayRef<char>(getWidth());
   }
   for (int x = 0; x < getWidth(); x++) {
-    row[x] = convertPixel(pixelRow + (x * 4));
+    row[x] = convertPixel(pixelRow + x * comps);
   }
   return row;
 }
 
 /** This is a more efficient implementation. */
-zxing::ArrayRef<char> ImageReaderSource::getMatrix() const {
-  const char* p = &image[0];
-  zxing::ArrayRef<char> matrix(getWidth() * getHeight());
-  char* m = &matrix[0];
+ArrayRef<char> ImageReaderSource::getMatrix() const {
+  const char* pixel = &image[0];
+  ArrayRef<char> matrix(getWidth() * getHeight());
+  char* output = &matrix[0];
   for (int y = 0; y < getHeight(); y++) {
     for (int x = 0; x < getWidth(); x++) {
-      *m = convertPixel(p);
-      m++;
-      p += 4;
+      *output++ = convertPixel(pixel);
+      pixel += comps;
     }
   }
   return matrix;
